@@ -1,8 +1,10 @@
 package com.github.saurfang.spark.tsne
 
+import breeze.linalg.sum
+import breeze.numerics.exp
 import org.apache.spark.Logging
-import org.apache.spark.mllib.linalg.{Vectors, Matrices}
-import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, RowMatrix, DistributedMatrix}
+import org.apache.spark.mllib.linalg.{Vectors, Vector}
+import org.apache.spark.mllib.linalg.distributed.{MatrixEntry, CoordinateMatrix, RowMatrix, DistributedMatrix}
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.mllib.X2PHelper._
 import org.apache.spark.mllib.rdd.MLPairRDDFunctions._
@@ -23,16 +25,56 @@ import org.apache.spark.mllib.rdd.MLPairRDDFunctions._
  *  https://github.com/lvdmaaten/lvdmaaten.github.io/tree/master/tsne/code
  */
 object X2P extends Logging {
-  def apply(x: RowMatrix, tol: Double = 1e-4, perplexity: Int = 15) = {
+  def apply(x: RowMatrix, tol: Double = 1e-5, perplexity: Double = 30.0) = {
+    require(tol >= 0, "Tolerance must be non-negative")
+    require(perplexity > 0, "Perplexity must be positive")
+
     val n = x.numRows()
-    val mu = 3 * perplexity
+    val mu = (3 * perplexity).toInt
+    val logU = Math.log(perplexity)
     val norms = x.rows.map(Vectors.norm(_, 2.0))
+    norms.persist()
     val rowsWithNorm = x.rows.zip(norms).map{ case (v, norm) => new VectorWithNorm(v, norm) }
     val neighbors = rowsWithNorm
       .zipWithIndex()
-      .flatMap{ case (v, i) => (1L to n).filter(_ != i).map(j => (j, v))}
+      .flatMap{ case (v, i) => (1L to n).filter(_ != i).map(j => (j, (i, v)))}
       .join(rowsWithNorm.zipWithIndex().map{case (v, i) => (i, v)})
-      .map{ case (i, (u, v)) => (i, fastSquaredDistance(u, v)) }
-      .topByKey(mu)
+      .map{ case (i, ((j, u), v)) => (i, (j, fastSquaredDistance(u, v))) }
+      .topByKey(mu)(Ordering.by(e => e._2))
+    norms.unpersist()
+
+    new CoordinateMatrix(
+      neighbors.flatMap {
+        case (i, arr) =>
+          var betamin = Double.MinValue
+          var betamax =  Double.MaxValue
+          var beta = 1.0
+
+          val d = Vectors.dense(arr.map(_._2))
+          var (h, p) = Hbeta(d, beta)
+
+          // Evaluate whether the perplexity is within tolerance
+          def Hdiff = h - logU
+          var tries = 0
+          while (Math.abs(Hdiff) > tol && tries < 50) {
+            //If not, increase or decrease precision
+            if (Hdiff > 0) {
+              betamin = beta
+              beta = if (betamax.isInfinite) beta * 2 else (beta + betamax) / 2
+            } else {
+              betamax = beta
+              beta = if (betamin.isInfinite) beta / 2 else (beta + betamin) / 2
+            }
+
+            // Recompute the values
+            val HP = Hbeta(d, beta)
+            h = HP._1
+            p = HP._2
+            tries = tries + 1
+          }
+
+          arr.map(_._1).zip(p).map{ case (j, v) => MatrixEntry(i, j, v) }
+      }
+    )
   }
 }

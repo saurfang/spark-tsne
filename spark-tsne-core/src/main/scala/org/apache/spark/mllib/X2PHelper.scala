@@ -1,8 +1,11 @@
 package org.apache.spark.mllib
 
+import breeze.linalg.sum
 import org.apache.spark.mllib.linalg.Vector
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.util.MLUtils
+import org.apache.spark.mllib.linalg.BLAS.{axpy, dot, scal}
+
 
 object X2PHelper {
 
@@ -19,4 +22,10 @@ object X2PHelper {
     def toDense: VectorWithNorm = new VectorWithNorm(Vectors.dense(vector.toArray), norm)
   }
 
+ def Hbeta(D: Vector, beta: Double = 1.0) = {
+    val P = Vectors.dense(D.toArray.map(d => Math.exp(-d * beta)))
+    val sumP = P.toArray.sum
+    val H = Math.log(sumP) + beta * dot(D, P) / sumP
+    (H, P.toArray.map(_ / sumP))
+  }
 }
