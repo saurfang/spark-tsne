@@ -1,10 +1,8 @@
 package org.apache.spark.mllib
 
-import breeze.linalg.sum
-import org.apache.spark.mllib.linalg.Vector
-import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.linalg.BLAS.dot
+import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.mllib.util.MLUtils
-import org.apache.spark.mllib.linalg.BLAS.{axpy, dot, scal}
 
 
 object X2PHelper {
