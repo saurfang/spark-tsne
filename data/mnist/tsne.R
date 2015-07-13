@@ -19,5 +19,6 @@ traceAnimate <- function() {
   })
 }
 
+ani.options(loop = FALSE)
 saveGIF(traceAnimate(), interval = 0.05, movie.name = "tsne.gif")
 

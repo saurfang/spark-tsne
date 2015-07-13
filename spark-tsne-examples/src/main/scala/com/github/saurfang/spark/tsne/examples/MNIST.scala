@@ -24,7 +24,7 @@ object MNIST extends Logging {
 
     val labels = dataset.map(_._1).collect()
     val matrix = new RowMatrix(dataset.map(x => Vectors.dense(x._2)))
-    val pcaMatrix = matrix.multiply(matrix.computePrincipalComponents(100))
+    val pcaMatrix = matrix.multiply(matrix.computePrincipalComponents(300))
     pcaMatrix.rows.cache()
 
     val costWriter = new BufferedWriter(new OutputStreamWriter(fs.create(new Path(s".tmp/MNIST/cost.txt"), true)))
