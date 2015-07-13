@@ -8,14 +8,16 @@ results <- lapply(resultFiles, function(file) { read.csv(file, FALSE) })
 plotResult <- function(i) {
   ggplot(results[[i]]) +
     aes(V2, V3, color = as.factor(V1)) +
-    geom_point()
+    geom_point() +
+    xlim(-2, 2) +
+    ylim(-2, 2)
 }
 
 traceAnimate <- function() {
   lapply(seq(1, length(results), 1), function(i) {
-    plotResult(i)
+    print(plotResult(i))
   })
 }
 
-saveGIF(traceAnimate, interval = .2, movie.name = "tsne.gif")
+saveGIF(traceAnimate(), interval = 0.05, movie.name = "tsne.gif")
 

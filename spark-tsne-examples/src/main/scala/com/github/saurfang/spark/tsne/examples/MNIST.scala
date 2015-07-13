@@ -34,7 +34,7 @@ object MNIST extends Logging {
         val (i, y, loss) = res
           logInfo(s"$i iteration finished with loss $loss")
 
-        val os = fs.create(new Path(s".tmp/MNIST/result$i.csv"), true)
+        val os = fs.create(new Path(s".tmp/MNIST/result${"%05d".format(i)}.csv"), true)
         val writer = new BufferedWriter(new OutputStreamWriter(os))
         try {
           (0 until y.rows).foreach {
