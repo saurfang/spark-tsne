@@ -4,7 +4,7 @@ object SparkSubmit {
   lazy val settings =
     SparkSubmitSetting("sparkMNIST",
       Seq(
-        "--master", "local[*]",
+        "--master", "local[2]",
         "--class", "com.github.saurfang.spark.tsne.examples.MNIST"
       )
     )

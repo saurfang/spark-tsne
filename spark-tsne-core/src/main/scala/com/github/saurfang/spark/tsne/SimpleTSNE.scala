@@ -6,7 +6,7 @@ import breeze.stats.distributions.Rand
 import org.apache.spark.Logging
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.storage.StorageLevel
-import rx.lang.scala.Observable
+import rx.lang.scala.{Subscription, Observable}
 
 import scala.util.Random
 
@@ -16,7 +16,7 @@ object SimpleTSNE extends Logging {
             noDims: Int = 2,
             maxIterations: Int = 1000,
             perplexity: Double = 30,
-            seed: Long = Random.nextLong()): Observable[(DenseMatrix[Double], Double)] = {
+            seed: Long = Random.nextLong()): Observable[(Int, DenseMatrix[Double], Double)] = {
     if(input.rows.getStorageLevel != StorageLevel.NONE) {
       logWarning("Input is not persisted and performance could be bad")
     }
@@ -35,6 +35,7 @@ object SimpleTSNE extends Logging {
 
     // approximate p_{j|i}
     val p_ji = X2P(input, 1e-5, perplexity)
+    //logInfo(p_ji.toRowMatrix().rows.collect().toList.toString)
     // p_ij = (p_{i|j} + p_{j|i}) / 2n
     val P = p_ji.transpose().entries.union(p_ji.entries)
       .map(e => ((e.i.toInt, e.j.toInt), e.value))
@@ -43,26 +44,24 @@ object SimpleTSNE extends Logging {
       .groupByKey()
       .cache()
 
-    Observable.from((1 to maxIterations).map{
-      iteration =>
-      val bcY = P.context.broadcast(Y)
+    Observable(subscriber => {
+      var iteration = 1
+      while(iteration <= maxIterations && !subscriber.isUnsubscribed) {
+        val bcY = P.context.broadcast(Y)
 
-      val sumY = {
-        val ySquared = (Y :* Y).toDenseMatrix
-        sum(ySquared(*, ::))
-      }
+        //TODO: Distribute the computation of num
+        val bcNumerator = P.context.broadcast({
+          val sumY = sum((Y :* Y).apply(*, ::))
+          //num = 1 ./ (1 + ((-2 * (Y * Y')) .+ sum_Y)' .+ sum_Y)
+          //some type inference problems here in intellij
+          val num: DenseMatrix[Double] = -2.0 :* (Y * Y.t)
+          num := (num(::, *) + sumY).t
+          num := 1.0 :/ (1.0 :+ (num(::, *) + sumY))
+          diag(num) := 0.0
+          sum(num)
+        })
 
-      val bcNumerator = P.context.broadcast({
-        //num = 1 ./ (1 + ((-2 * (Y * Y')) .+ sum_Y)' .+ sum_Y)
-        //some type inference problems here in intellij
-        val y1: DenseMatrix[Double] = -2.0 :* (Y * Y.t)
-        val y2 = (y1(::, *) + sumY).t
-        val num = 1.0 :/ (1.0 :+ (y2(::, *) + sumY))
-        diag(num) := 0.0
-        sum(num)
-      })
-
-      val (dY, loss) = P.treeAggregate((DenseMatrix.zeros[Double](n, noDims), 0.0))(
+        val (dY, loss) = P.treeAggregate((DenseMatrix.zeros[Double](n, noDims), 0.0))(
           seqOp = (c, v) => {
             // c: (grad, loss), v: (i, Iterable(j, Distance))
             val l = TSNEGradient.compute(v._2, v._1, bcY.value, bcNumerator.value, c._1, iteration < early_exaggeration)
@@ -73,17 +72,20 @@ object SimpleTSNE extends Logging {
             (c1._1 += c2._1, c1._2 + c2._2)
           })
 
-      val momentum = if (iteration <= t_momentum) initial_momentum else final_momentum
-      val dYiY = (dY :> 0.0) :!= (iY :> 0.0)
-      gains := gains
-        .mapPairs{ case ((i, j), gain) => if(dYiY(i, j)) gain + 0.2 else gain * 0.8 }
-        .mapValues(math.max(_, min_gain))
-      iY := momentum :* iY - eta :* (gains :* dY)
-      Y := Y + iY
-      Y := Y(*, ::) - (mean(Y(::, *)): DenseMatrix[Double]).toDenseVector
+        val momentum = if (iteration <= t_momentum) initial_momentum else final_momentum
+        val dYiY = (dY :> 0.0) :!= (iY :> 0.0)
+        gains := gains
+          .mapPairs{ case ((i, j), gain) => if(dYiY(i, j)) gain + 0.2 else gain * 0.8 }
+          .mapValues(math.max(_, min_gain))
+        iY := momentum :* iY - eta :* (gains :* dY)
+        Y := Y + iY
+        Y := Y(*, ::) - (mean(Y(::, *)): DenseMatrix[Double]).toDenseVector
 
-      logDebug(s"Iteration $iteration finished with $loss")
-      (Y.copy, loss)
+        logDebug(s"Iteration $iteration finished with $loss")
+        subscriber.onNext((iteration, Y.copy, loss))
+        iteration += 1
+      }
+      if(!subscriber.isUnsubscribed) subscriber.onCompleted()
     })
   }
 }

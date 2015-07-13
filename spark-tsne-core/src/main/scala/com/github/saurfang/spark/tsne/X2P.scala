@@ -46,8 +46,8 @@ object X2P extends Logging {
     new CoordinateMatrix(
       neighbors.flatMap {
         case (i, arr) =>
-          var betamin = Double.MinValue
-          var betamax =  Double.MaxValue
+          var betamin = Double.NegativeInfinity
+          var betamax =  Double.PositiveInfinity
           var beta = 1.0
 
           val d = Vectors.dense(arr.map(_._2))
