@@ -17,7 +17,7 @@ object SimpleTSNE extends Logging {
             maxIterations: Int = 1000,
             perplexity: Double = 30,
             seed: Long = Random.nextLong()): Observable[(Int, DenseMatrix[Double], Double)] = {
-    if(input.rows.getStorageLevel != StorageLevel.NONE) {
+    if(input.rows.getStorageLevel == StorageLevel.NONE) {
       logWarning("Input is not persisted and performance could be bad")
     }
 
@@ -29,7 +29,7 @@ object SimpleTSNE extends Logging {
     val eta = 500.0
     val min_gain = 0.01
 
-    val Y = DenseMatrix.rand(n, noDims, Rand.gaussian)
+    val Y: DenseMatrix[Double] = DenseMatrix.rand(n, noDims, Rand.gaussian) :* .0001
     val iY = DenseMatrix.zeros[Double](n, noDims)
     val gains = DenseMatrix.ones[Double](n, noDims)
 

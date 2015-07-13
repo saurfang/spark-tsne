@@ -20,10 +20,14 @@ object X2PHelper {
     def toDense: VectorWithNorm = new VectorWithNorm(Vectors.dense(vector.toArray), norm)
   }
 
- def Hbeta(D: Vector, beta: Double = 1.0) = {
-    val P = Vectors.dense(D.toArray.map(d => Math.exp(-d * beta)))
+  def Hbeta(D: Vector, beta: Double = 1.0) : (Double, Array[Double]) = {
+    val P = Vectors.dense(D.toArray.map(d => math.exp(-d * beta)))
     val sumP = P.toArray.sum
-    val H = Math.log(sumP) + beta * dot(D, P) / sumP
-    (H, P.toArray.map(_ / sumP))
+    if(sumP == 0) {
+      (0.0, Vectors.zeros(D.size).toArray)
+    }else {
+      val H = Math.log(sumP) + beta * dot(D, P) / sumP
+      (H, P.toArray.map(_ / sumP))
+    }
   }
 }

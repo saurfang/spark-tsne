@@ -5,6 +5,7 @@ import java.io.{OutputStreamWriter, BufferedWriter}
 
 import com.github.saurfang.spark.tsne.SimpleTSNE
 import org.apache.hadoop.fs.{Path, FileSystem}
+import org.apache.spark.mllib.feature.StandardScaler
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.{Logging, SparkConf, SparkContext}
@@ -21,15 +22,22 @@ object MNIST extends Logging {
       .map(x => x.split(","))
       .map(x => (x.head.toInt, x.tail.map(_.toDouble)))
       .cache()
+    //logInfo(dataset.collect.map(_._2.toList).toList.toString)
+
+    val features = dataset.map(x => Vectors.dense(x._2))
+    val scaler = new StandardScaler(true, true).fit(features)
+    val scaledData = scaler.transform(features)
+      .map(v => Vectors.dense(v.toArray.map(x => if(x.isNaN || x.isInfinite) 0.0 else x)))
+      .cache()
 
     val labels = dataset.map(_._1).collect()
-    val matrix = new RowMatrix(dataset.map(x => Vectors.dense(x._2)))
+    val matrix = new RowMatrix(scaledData)
     val pcaMatrix = matrix.multiply(matrix.computePrincipalComponents(300))
     pcaMatrix.rows.cache()
 
     val costWriter = new BufferedWriter(new OutputStreamWriter(fs.create(new Path(s".tmp/MNIST/cost.txt"), true)))
 
-    SimpleTSNE.tsne(pcaMatrix, maxIterations = 500).subscribe {
+    SimpleTSNE.tsne(pcaMatrix, perplexity = 100, maxIterations = 500).subscribe {
       res =>
         val (i, y, loss) = res
           logInfo(s"$i iteration finished with loss $loss")

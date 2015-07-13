@@ -30,7 +30,7 @@ object X2P extends Logging {
     require(perplexity > 0, "Perplexity must be positive")
 
     val n = x.numRows()
-    val mu = (3 * perplexity).toInt
+    val mu = (10 * perplexity).toInt //TODO: Expose this as parameter
     val logU = Math.log(perplexity)
     val norms = x.rows.map(Vectors.norm(_, 2.0))
     norms.persist()
@@ -40,7 +40,8 @@ object X2P extends Logging {
       .flatMap{ case (v, i) => (1L to n).filter(_ != i).map(j => (j, (i, v)))}
       .join(rowsWithNorm.zipWithIndex().map{case (v, i) => (i, v)})
       .map{ case (i, ((j, u), v)) => (i, (j, fastSquaredDistance(u, v))) }
-      .topByKey(mu)(Ordering.by(e => e._2))
+      .filter(_._2._2 > 0)
+      .topByKey(mu)(Ordering.by(e => -e._2))
     norms.unpersist()
 
     new CoordinateMatrix(
@@ -52,6 +53,9 @@ object X2P extends Logging {
 
           val d = Vectors.dense(arr.map(_._2))
           var (h, p) = Hbeta(d, beta)
+
+          //logInfo("data was " + d.toArray.toList)
+          //logInfo("array P was " + p.toList)
 
           // Evaluate whether the perplexity is within tolerance
           def Hdiff = h - logU
@@ -72,6 +76,8 @@ object X2P extends Logging {
             p = HP._2
             tries = tries + 1
           }
+
+          //logInfo("array P is " + p.toList)
 
           arr.map(_._1).zip(p).map{ case (j, v) => MatrixEntry(i, j, v) }
       }
