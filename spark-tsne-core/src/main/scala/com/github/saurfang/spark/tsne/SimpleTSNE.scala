@@ -49,21 +49,23 @@ object SimpleTSNE extends Logging {
       while(iteration <= maxIterations && !subscriber.isUnsubscribed) {
         val bcY = P.context.broadcast(Y)
 
-        //TODO: Cache the numerator calculation
+        val numerator = P.map{ case (i, _) => TSNEGradient.computeNumerator(i, bcY.value) }.cache()
         val bcNumerator = P.context.broadcast({
-          P.map{ case (i, _) => sum(TSNEGradient.computeNumerator(i, bcY.value)) }.sum
+          numerator.treeAggregate(0.0)(seqOp = (x, v) => x + sum(v), combOp = _ + _)
         })
 
-        val (dY, loss) = P.treeAggregate((DenseMatrix.zeros[Double](n, noDims), 0.0))(
+        val (dY, loss) = P.zip(numerator).treeAggregate((DenseMatrix.zeros[Double](n, noDims), 0.0))(
           seqOp = (c, v) => {
-            // c: (grad, loss), v: (i, Iterable(j, Distance))
-            val l = TSNEGradient.compute(v._2, v._1, bcY.value, bcNumerator.value, c._1, iteration < early_exaggeration)
+            // c: (grad, loss), v: ((i, Iterable(j, Distance)), numerator)
+            val l = TSNEGradient.compute(v._1._2, v._1._1, bcY.value, v._2, bcNumerator.value, c._1, iteration < early_exaggeration)
             (c._1, c._2 + l)
           },
           combOp = (c1, c2) => {
             // c: (grad, loss)
             (c1._1 += c2._1, c1._2 + c2._2)
           })
+
+        numerator.unpersist()
 
         val momentum = if (iteration <= t_momentum) initial_momentum else final_momentum
         val dYiY = (dY :> 0.0) :!= (iY :> 0.0)

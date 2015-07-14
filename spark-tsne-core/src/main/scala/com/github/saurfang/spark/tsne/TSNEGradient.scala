@@ -15,9 +15,11 @@ object TSNEGradient extends Logging  {
     // Y_diff = Y_i - Y
     val yDiff: DenseMatrix[Double] = (-Y).apply(*, ::) + Y(i, ::).inner
     // Y_sum = ||Y_i - Y||^2
-    val sumY = sum((yDiff :* yDiff: DenseMatrix[Double])(*, ::))
+    val num = sum((yDiff :* yDiff: DenseMatrix[Double])(*, ::))
+    //val ySquared = Y :* Y
+    //val num = ySquared(i) :- (2 :* Y(i) :* Y) :+ ySquared
     // num = (1 + ||Y_i - Y||^2)^-1
-    val num = 1.0 :/ (1.0 :+ sumY)
+    num := 1.0 :/ (1.0 :+ num)
     num(i) = 0
     num := num.mapValues(math.max(_, 1e-12))
     num
@@ -37,6 +39,7 @@ object TSNEGradient extends Logging  {
                data: Iterable[(Int, Double)],
                i: Int,
                Y: DenseMatrix[Double],
+               num: DenseVector[Double],
                totalNum: Double,
                dY: DenseMatrix[Double],
                exaggeration: Boolean): Double = {
@@ -44,7 +47,6 @@ object TSNEGradient extends Logging  {
     val exaggeratedData = if(exaggeration) data.map{ case(j, v) => (j, v * 4) } else data
     val p = SparseVector(n)(exaggeratedData.toSeq: _*).toDenseVector.mapValues(math.max(_, 1e-12))
 
-    val num = computeNumerator(i, Y)
     // q = (1 + ||Y_i - Y_j||^2)^-1 / sum(1 + ||Y_k - Y_l||^2)^-1
     val q: DenseVector[Double] = num :/ totalNum
     // l = [ (p_ij - q_ij) * (1 + ||Y_i - Y_j||^2)^-1 ]
