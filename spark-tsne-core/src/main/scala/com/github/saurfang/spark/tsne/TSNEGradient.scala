@@ -6,6 +6,24 @@ import org.apache.spark.Logging
 
 object TSNEGradient extends Logging  {
   /**
+   *
+   * @param i
+   * @param Y
+   * @return
+   */
+  def computeNumerator(i: Int, Y: DenseMatrix[Double]): DenseVector[Double] = {
+    // Y_diff = Y_i - Y
+    val yDiff: DenseMatrix[Double] = (-Y).apply(*, ::) + Y(i, ::).inner
+    // Y_sum = ||Y_i - Y||^2
+    val sumY = sum((yDiff :* yDiff: DenseMatrix[Double])(*, ::))
+    // num = (1 + ||Y_i - Y||^2)^-1
+    val num = 1.0 :/ (1.0 :+ sumY)
+    num(i) = 0
+    num := num.mapValues(math.max(_, 1e-12))
+    num
+  }
+
+  /**
    * Compute the TSNE Gradient at i. Update the gradient through dY then return costs attributed at i.
    *
    * @param data data point for row i by list of pair of (j, p_ij) and 0 <= j < n
@@ -26,14 +44,7 @@ object TSNEGradient extends Logging  {
     val exaggeratedData = if(exaggeration) data.map{ case(j, v) => (j, v * 4) } else data
     val p = SparseVector(n)(exaggeratedData.toSeq: _*).toDenseVector.mapValues(math.max(_, 1e-12))
 
-    // Y_diff = Y_i - Y
-    val yDiff: DenseMatrix[Double] = (-Y).apply(*, ::) + Y(i, ::).inner
-    // Y_sum = ||Y_i - Y||^2
-    val sumY = sum((yDiff :* yDiff: DenseMatrix[Double])(*, ::))
-    // num = (1 + ||Y_i - Y||^2)^-1
-    val num = 1.0 :/ (1.0 :+ sumY)
-    num(i) = 0
-    num := num.mapValues(math.max(_, 1e-12))
+    val num = computeNumerator(i, Y)
     // q = (1 + ||Y_i - Y_j||^2)^-1 / sum(1 + ||Y_k - Y_l||^2)^-1
     val q: DenseVector[Double] = num :/ totalNum
     // l = [ (p_ij - q_ij) * (1 + ||Y_i - Y_j||^2)^-1 ]

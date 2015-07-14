@@ -30,7 +30,7 @@ object X2P extends Logging {
     require(perplexity > 0, "Perplexity must be positive")
 
     val n = x.numRows()
-    val mu = (10 * perplexity).toInt //TODO: Expose this as parameter
+    val mu = (3 * perplexity).toInt //TODO: Expose this as parameter
     val logU = Math.log(perplexity)
     val norms = x.rows.map(Vectors.norm(_, 2.0))
     norms.persist()

@@ -49,16 +49,9 @@ object SimpleTSNE extends Logging {
       while(iteration <= maxIterations && !subscriber.isUnsubscribed) {
         val bcY = P.context.broadcast(Y)
 
-        //TODO: Distribute the computation of num
+        //TODO: Cache the numerator calculation
         val bcNumerator = P.context.broadcast({
-          val sumY = sum((Y :* Y).apply(*, ::))
-          //num = 1 ./ (1 + ((-2 * (Y * Y')) .+ sum_Y)' .+ sum_Y)
-          //some type inference problems here in intellij
-          val num: DenseMatrix[Double] = -2.0 :* (Y * Y.t)
-          num := (num(::, *) + sumY).t
-          num := 1.0 :/ (1.0 :+ (num(::, *) + sumY))
-          diag(num) := 0.0
-          sum(num)
+          P.map{ case (i, _) => sum(TSNEGradient.computeNumerator(i, bcY.value)) }.sum
         })
 
         val (dY, loss) = P.treeAggregate((DenseMatrix.zeros[Double](n, noDims), 0.0))(

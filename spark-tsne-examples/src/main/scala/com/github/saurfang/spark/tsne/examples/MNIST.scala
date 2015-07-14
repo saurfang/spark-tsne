@@ -37,7 +37,7 @@ object MNIST extends Logging {
 
     val costWriter = new BufferedWriter(new OutputStreamWriter(fs.create(new Path(s".tmp/MNIST/cost.txt"), true)))
 
-    SimpleTSNE.tsne(pcaMatrix, perplexity = 100, maxIterations = 500).subscribe {
+    SimpleTSNE.tsne(pcaMatrix, perplexity = 10, maxIterations = 500).subscribe {
       res =>
         val (i, y, loss) = res
           logInfo(s"$i iteration finished with loss $loss")
