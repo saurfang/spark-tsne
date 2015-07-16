@@ -6,7 +6,7 @@ import breeze.stats.distributions.Rand
 import org.apache.spark.Logging
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.storage.StorageLevel
-import rx.lang.scala.{Subscription, Observable}
+import rx.lang.scala.Observable
 
 import scala.util.Random
 

@@ -13,9 +13,9 @@ object TSNEGradient extends Logging  {
    */
   def computeNumerator(i: Int, Y: DenseMatrix[Double]): DenseVector[Double] = {
     // Y_diff = Y_i - Y
-    val yDiff: DenseMatrix[Double] = (-Y).apply(*, ::) + Y(i, ::).inner
+    val yDiff: DenseMatrix[Double] = Y(*, ::) - Y(i, ::).inner
     // Y_sum = ||Y_i - Y||^2
-    val num = sum((yDiff :* yDiff: DenseMatrix[Double])(*, ::))
+    val num = sum((yDiff :* yDiff).apply(*, ::))
     //val ySquared = Y :* Y
     //val num = ySquared(i) :- (2 :* Y(i) :* Y) :+ ySquared
     // num = (1 + ||Y_i - Y||^2)^-1
