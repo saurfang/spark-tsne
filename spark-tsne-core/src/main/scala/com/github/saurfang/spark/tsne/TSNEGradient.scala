@@ -60,11 +60,11 @@ object TSNEGradient extends Logging  {
     }.sum
 
     // l = [ (p_ij - q_ij) * (1 + ||Y_i - Y_j||^2)^-1 ]
-    q := -q :* num
+    q :*= -num
     // l_sum = [0 0 ... sum(l) ... 0]
     sum(q(*, ::)).foreachPair{ case (i, v) => q.unsafeUpdate(i, data(i)._1, q(i, i) - v) }
 
-    // TODO: dY_i = -4 * (l - l_sum) * Y
+    // dY_i = -4 * (l - l_sum) * Y
     val dYi: DenseMatrix[Double] = -4.0 :* (q * Y)
     data.map(_._1).zipWithIndex.foreach{
       case (i, idx) => dY(i, ::) := dYi(idx, ::)

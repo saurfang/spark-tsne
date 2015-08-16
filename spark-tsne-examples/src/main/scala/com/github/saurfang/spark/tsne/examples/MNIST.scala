@@ -44,7 +44,7 @@ object MNIST extends Logging {
 
     val costWriter = new BufferedWriter(new OutputStreamWriter(fs.create(new Path(s".tmp/MNIST/cost.txt"), true)))
 
-    SimpleTSNE.tsne(pcaMatrix, perplexity = 20, maxIterations = 1000)
+    SimpleTSNE.tsne(pcaMatrix, perplexity = 20, maxIterations = 200)
     //LBFGSTSNE.tsne(pcaMatrix, perplexity = 10, maxNumIterations = 500, numCorrections = 10, convergenceTol = 1e-8)
       .toBlocking
       .foreach {

@@ -29,7 +29,7 @@ object SimpleTSNE extends Logging {
     val eta = 500.0
     val min_gain = 0.01
 
-    val Y: DenseMatrix[Double] = DenseMatrix.rand(n, noDims, Rand.gaussian) //:* .0001
+    val Y: DenseMatrix[Double] = DenseMatrix.rand(n, noDims, Rand.gaussian) :* .0001
     val iY = DenseMatrix.zeros[Double](n, noDims)
     val gains = DenseMatrix.ones[Double](n, noDims)
 
@@ -78,11 +78,12 @@ object SimpleTSNE extends Logging {
 
         val momentum = if (iteration <= t_momentum) initial_momentum else final_momentum
         val dYiY = (dY :> 0.0) :!= (iY :> 0.0)
-        gains := gains
-          .mapPairs{ case ((i, j), gain) => if(dYiY(i, j)) gain + 0.2 else gain * 0.8 }
-          .mapValues(math.max(_, min_gain))
-        iY := momentum :* iY - eta :* (gains :* dY)
-        Y := Y + iY
+        gains.foreachPair{
+          case ((i, j), gain) =>
+            gains.unsafeUpdate(i, j, math.max(min_gain, if(dYiY(i, j)) gain + 0.2 else gain * 0.8))
+        }
+        iY := (momentum :* iY) - (eta :* gains :* dY)
+        Y :+= iY
         Y := Y(*, ::) - (mean(Y(::, *)): DenseMatrix[Double]).toDenseVector
 
         logDebug(s"Iteration $iteration finished with $loss")

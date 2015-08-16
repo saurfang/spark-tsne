@@ -14,8 +14,9 @@ ymax <- computeLimit(. %>% {max(abs(.$V3))}, cummax)
 
 plotResult <- function(i) {
   ggplot(results[[i]]) +
-    aes(V2, V3, color = as.factor(V1)) +
-    geom_point() +
+    aes(V2, V3, color = as.factor(V1), label = V1) +
+    #geom_point() +
+    geom_text() +
     xlim(-xmax[i], xmax[i]) +
     ylim(-ymax[i], ymax[i])
 }
