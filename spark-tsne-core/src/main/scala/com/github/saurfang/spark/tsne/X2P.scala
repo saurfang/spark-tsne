@@ -1,12 +1,9 @@
 package com.github.saurfang.spark.tsne
 
-import breeze.linalg.sum
-import breeze.numerics.exp
 import org.apache.spark.Logging
-import org.apache.spark.mllib.linalg.{Vectors, Vector}
-import org.apache.spark.mllib.linalg.distributed.{MatrixEntry, CoordinateMatrix, RowMatrix, DistributedMatrix}
-import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.mllib.X2PHelper._
+import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, MatrixEntry, RowMatrix}
 import org.apache.spark.mllib.rdd.MLPairRDDFunctions._
 
 /**
@@ -25,11 +22,10 @@ import org.apache.spark.mllib.rdd.MLPairRDDFunctions._
  *  https://github.com/lvdmaaten/lvdmaaten.github.io/tree/master/tsne/code
  */
 object X2P extends Logging {
-  def apply(x: RowMatrix, tol: Double = 1e-5, perplexity: Double = 30.0) = {
+  def apply(x: RowMatrix, tol: Double = 1e-5, perplexity: Double = 30.0): CoordinateMatrix = {
     require(tol >= 0, "Tolerance must be non-negative")
     require(perplexity > 0, "Perplexity must be positive")
 
-    val n = x.numRows()
     val mu = (3 * perplexity).toInt //TODO: Expose this as parameter
     val logU = Math.log(perplexity)
     val norms = x.rows.map(Vectors.norm(_, 2.0))
@@ -37,18 +33,21 @@ object X2P extends Logging {
     val rowsWithNorm = x.rows.zip(norms).map{ case (v, norm) => new VectorWithNorm(v, norm) }
     val neighbors = rowsWithNorm
       .zipWithIndex()
-      .flatMap{ case (v, i) => (1L to n).filter(_ != i).map(j => (j, (i, v)))}
+      .flatMap{ case (v, i) => (0L until i).map(j => (j, (i, v)))}
       .join(rowsWithNorm.zipWithIndex().map{case (v, i) => (i, v)})
-      .map{ case (i, ((j, u), v)) => (i, (j, fastSquaredDistance(u, v))) }
-      .filter(_._2._2 > 0)
+      .flatMap{
+      case (i, ((j, u), v)) =>
+        val dist = fastSquaredDistance(u, v)
+        Seq((i, (j, dist)), (j, (i, dist)))
+    }
       .topByKey(mu)(Ordering.by(e => -e._2))
     norms.unpersist()
 
-    new CoordinateMatrix(
-      neighbors.flatMap {
+    val p_betas =
+      neighbors.map {
         case (i, arr) =>
           var betamin = Double.NegativeInfinity
-          var betamax =  Double.PositiveInfinity
+          var betamax = Double.PositiveInfinity
           var beta = 1.0
 
           val d = Vectors.dense(arr.map(_._2))
@@ -79,8 +78,10 @@ object X2P extends Logging {
 
           //logInfo("array P is " + p.toList)
 
-          arr.map(_._1).zip(p).map{ case (j, v) => MatrixEntry(i, j, v) }
+          (arr.map(_._1).zip(p).map { case (j, v) => MatrixEntry(i, j, v) }, beta)
       }
-    )
+
+    logInfo("Mean value of sigma: " + p_betas.map(x => math.sqrt(1 / x._2)).mean)
+    new CoordinateMatrix(p_betas.flatMap(_._1))
   }
 }

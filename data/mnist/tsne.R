@@ -5,15 +5,19 @@ library(animation)
 resultFiles <- list.files("~/GitHub/spark-tsne/.tmp/MNIST/", "result", full.names = TRUE)
 results <- lapply(resultFiles, function(file) { read.csv(file, FALSE) })
 
-xlimit <- sapply(results, . %>% { .$V2 }) %>% {c(min(.), max(.))}
-ylimit <- sapply(results, . %>% { .$V3 }) %>% {c(min(.), max(.))}
+computeLimit <- function(f, cumf) {
+  cumf(lapply(results, f))
+}
+
+xmax <- computeLimit(. %>% {max(abs(.$V2))}, cummax)
+ymax <- computeLimit(. %>% {max(abs(.$V3))}, cummax)
 
 plotResult <- function(i) {
   ggplot(results[[i]]) +
     aes(V2, V3, color = as.factor(V1)) +
     geom_point() +
-    xlim(xlimit) +
-    ylim(ylimit)
+    xlim(-xmax[i], xmax[i]) +
+    ylim(-ymax[i], ymax[i])
 }
 
 traceAnimate <- function() {
@@ -22,5 +26,6 @@ traceAnimate <- function() {
   })
 }
 
+file.remove("tsne.gif")
 saveGIF(traceAnimate(), interval = 0.05, movie.name = "tsne.gif", loop = 1)
 

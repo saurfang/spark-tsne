@@ -23,13 +23,13 @@ object SimpleTSNE extends Logging {
 
     val n = input.numRows().toInt
     val early_exaggeration = 100
-    val t_momentum = 250
+    val t_momentum = 20
     val initial_momentum = 0.5
     val final_momentum = 0.8
     val eta = 500.0
     val min_gain = 0.01
 
-    val Y: DenseMatrix[Double] = DenseMatrix.rand(n, noDims, Rand.gaussian) :* .0001
+    val Y: DenseMatrix[Double] = DenseMatrix.rand(n, noDims, Rand.gaussian) //:* .0001
     val iY = DenseMatrix.zeros[Double](n, noDims)
     val gains = DenseMatrix.ones[Double](n, noDims)
 
@@ -37,13 +37,20 @@ object SimpleTSNE extends Logging {
     val p_ji = X2P(input, 1e-5, perplexity)
     //logInfo(p_ji.toRowMatrix().rows.collect().toList.toString)
     // p_ij = (p_{i|j} + p_{j|i}) / 2n
-    val P = p_ji.transpose().entries.union(p_ji.entries)
-      .map(e => ((e.i.toInt, e.j.toInt), e.value))
+    val p_sum = p_ji.entries
+      .flatMap(e => Seq(
+        ((e.i.toInt, e.j.toInt), e.value),
+        ((e.j.toInt, e.i.toInt), e.value)
+      ))
       .reduceByKey(_ + _)
-      .map{case ((i, j), v) => (i, (j, v / 2 / n)) }
+      .cache()
+    val p_total = p_sum.map(_._2).sum()
+    val P = p_sum
+      .map{case ((i, j), v) => (i, (j, max(v / p_total, 1e-12))) }
       .groupByKey()
       .glom()
       .cache()
+    p_sum.unpersist()
 
     Observable(subscriber => {
       var iteration = 1
@@ -63,9 +70,10 @@ object SimpleTSNE extends Logging {
           },
           combOp = (c1, c2) => {
             // c: (grad, loss)
-            (c1._1 += c2._1, c1._2 + c2._2)
+            (c1._1 + c2._1, c1._2 + c2._2)
           })
 
+        bcY.destroy()
         numerator.unpersist()
 
         val momentum = if (iteration <= t_momentum) initial_momentum else final_momentum

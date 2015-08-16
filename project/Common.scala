@@ -11,7 +11,8 @@ object Common {
     javacOptions ++= Seq("-source", "1.7", "-target", "1.7"),
     scalacOptions ++= Seq("-target:jvm-1.7", "-deprecation", "-feature"),
     //git.useGitDescribe := true,
-    git.baseVersion := "0.0.1"
+    git.baseVersion := "0.0.1",
+    parallelExecution in test := false
   )
 
   def tsneProject(path: String): Project = macro tsneProjectMacroImpl

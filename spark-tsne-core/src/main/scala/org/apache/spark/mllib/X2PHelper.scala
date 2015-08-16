@@ -21,12 +21,12 @@ object X2PHelper {
   }
 
   def Hbeta(D: Vector, beta: Double = 1.0) : (Double, Array[Double]) = {
-    val P = Vectors.dense(D.toArray.map(d => math.exp(-d * beta)))
+    val P = Vectors.dense(D.toArray.map(d => math.exp(- d * beta)))
     val sumP = P.toArray.sum
     if(sumP == 0) {
       (0.0, Vectors.zeros(D.size).toArray)
     }else {
-      val H = Math.log(sumP) + beta * dot(D, P) / sumP
+      val H = math.log(sumP) + beta * dot(D, P) / sumP
       (H, P.toArray.map(_ / sumP))
     }
   }
