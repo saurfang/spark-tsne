@@ -16,9 +16,10 @@ object MNIST extends Logging {
     val hadoopConf = sc.hadoopConfiguration
     val fs = FileSystem.get(hadoopConf)
 
-    val dataset = sc.textFile("data/MNIST/mnist.csv", 5)
+    val dataset = sc.textFile("data/MNIST/mnist.csv.gz")
       .zipWithIndex()
       .filter(_._2 < 2500)
+      .repartition(5)
       .map(_._1)
       .map(x => x.split(","))
       .map(x => (x.head.toInt, x.tail.map(_.toDouble)))
