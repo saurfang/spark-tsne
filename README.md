@@ -2,7 +2,7 @@
 
 Distributed [t-SNE](http://lvdmaaten.github.io/tsne/) with Apache Spark. WIP...
 
-[d3.js player](http://cdn.rawgit.com/saurfang/spark-tsne/master/spark-tsne-player/src/main/html/tsne.html)
+[d3.js player](https://saurfang.github.io/spark-tsne/tsne.html)
 
 ![](data/mnist/tsne.gif)
 
