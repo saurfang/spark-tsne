@@ -6,21 +6,6 @@ import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, MatrixEntry, RowMatrix}
 import org.apache.spark.mllib.rdd.MLPairRDDFunctions._
 
-/**
- * X2P Identifies appropriate sigma's to get kk NNs up to some tolerance
- *
- *    [P, beta] = x2p(xx, kk, tol)
- *
- *  Identifies the required precision (= 1 / variance^2) to obtain a Gaussian
- *  kernel with a certain uncertainty for every datapoint. The desired
- *  uncertainty can be specified through the perplexity u (default = 15). The
- *  desired perplexity is obtained up to some tolerance that can be specified
- *  by tol (default = 1e-4).
- *  The function returns the final Gaussian kernel in P, as well as the
- *  employed precisions per instance in beta.
- *
- *  https://github.com/lvdmaaten/lvdmaaten.github.io/tree/master/tsne/code
- */
 object X2P extends Logging {
   def apply(x: RowMatrix, tol: Double = 1e-5, perplexity: Double = 30.0): CoordinateMatrix = {
     require(tol >= 0, "Tolerance must be non-negative")
