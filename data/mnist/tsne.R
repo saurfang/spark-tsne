@@ -34,8 +34,8 @@ plotResult <- function(i) {
     ylim(-ymax[i], ymax[i])
 }
 
-traceAnimate <- function(length = length(results), step = 1) {
-  lapply(seq(1, length, step), function(i) {
+traceAnimate <- function(n = length(results), step = 1) {
+  lapply(seq(1, n, step), function(i) {
     print(plotResult(i))
   })
 }

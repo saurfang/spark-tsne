@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<meta charset="utf-8">
+<meta charset='utf-8'>
 <title>t-SNE Viewer</title>
 <style>
 
@@ -24,7 +24,7 @@ text {
 }
 
 .iteration.label {
-  font: 500 196px "Helvetica Neue";
+  font: 500 196px 'Helvetica Neue';
   fill: #ddd;
 }
 
@@ -42,13 +42,13 @@ text {
 
 <h1>T-SNE Viewer</h1>
 
-<p id="chart"></p>
+<p id='chart'></p>
 
 <aside>Mouseover the iteration to move forward and backwards through time.</aside>
 
-<p class="attribution">Source: <a href="http://bost.ocks.org/mike/results">The Wealth & Health of Results</a>, <a href="http://bost.ocks.org/mike/">Mike Bostock</a>.</p>
+<p class='attribution'>Source: <a href='http://bost.ocks.org/mike/results'>The Wealth & Health of Results</a>, <a href='http://bost.ocks.org/mike/'>Mike Bostock</a>.</p>
 
-<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js'></script>
 <script>
 
 // Various accessors that specify the four dimensions of data to visualize.
@@ -69,52 +69,52 @@ var xScale = d3.scale.linear().domain([-20, 20]).range([0, width]),
     colorScale = d3.scale.category10();
 
 // The x & y axes.
-var xAxis = d3.svg.axis().orient("bottom").scale(xScale).ticks(12, d3.format(",d")),
-    yAxis = d3.svg.axis().orient("left").scale(yScale).ticks(12, d3.format(",d"));
+var xAxis = d3.svg.axis().orient('bottom').scale(xScale).ticks(12, d3.format(',d')),
+    yAxis = d3.svg.axis().orient('left').scale(yScale).ticks(12, d3.format(',d'));
 
 // Create the SVG container and set the origin.
-var svg = d3.select("#chart").append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+var svg = d3.select('#chart').append('svg')
+    .attr('width', width + margin.left + margin.right)
+    .attr('height', height + margin.top + margin.bottom)
+  .append('g')
+    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
 // Add the x-axis.
-svg.append("g")
-    .attr("class", "x axis")
-    .attr("transform", "translate(0," + height + ")")
+svg.append('g')
+    .attr('class', 'x axis')
+    .attr('transform', 'translate(0,' + height + ')')
     .call(xAxis);
 
 // Add the y-axis.
-svg.append("g")
-    .attr("class", "y axis")
+svg.append('g')
+    .attr('class', 'y axis')
     .call(yAxis);
 
 // Add an x-axis label.
-svg.append("text")
-    .attr("class", "x label")
-    .attr("text-anchor", "end")
-    .attr("x", width)
-    .attr("y", height - 6);
+svg.append('text')
+    .attr('class', 'x label')
+    .attr('text-anchor', 'end')
+    .attr('x', width)
+    .attr('y', height - 6);
 
 // Add a y-axis label.
-svg.append("text")
-    .attr("class", "y label")
-    .attr("text-anchor", "end")
-    .attr("y", 6)
-    .attr("dy", ".75em")
-    .attr("transform", "rotate(-90)");
+svg.append('text')
+    .attr('class', 'y label')
+    .attr('text-anchor', 'end')
+    .attr('y', 6)
+    .attr('dy', '.75em')
+    .attr('transform', 'rotate(-90)');
 
 // Add the iteration label; the value is set on transition.
-var label = svg.append("text")
-    .attr("class", "iteration label")
-    .attr("text-anchor", "end")
-    .attr("y", height - 24)
-    .attr("x", width)
-    .text("0000");
+var label = svg.append('text')
+    .attr('class', 'iteration label')
+    .attr('text-anchor', 'end')
+    .attr('y', height - 24)
+    .attr('x', width)
+    .text('0000');
 
 // Load the data.
-d3.json("mnist.json", function(results) {
+d3.json('mnist.json?nocache=' + (new Date()).getTime(), function(results) {
   var iterations = x(results[0]).length;
   var animationDuration = 100;
 
@@ -122,38 +122,38 @@ d3.json("mnist.json", function(results) {
   var bisect = d3.bisector(function(d) { return d[0]; });
 
   // Add a dot per nation. Initialize the data at 1, and set the colors.
-  var dot = svg.append("g")
-      .attr("class", "dots")
-    .selectAll(".dot")
+  var dot = svg.append('g')
+      .attr('class', 'dots')
+    .selectAll('.dot')
       .data(interpolateData(1))
-    .enter().append("text")
-      .attr("class", "dot")
+    .enter().append('text')
+      .attr('class', 'dot')
       .text(function(d) { return text(d); })
-      .style("fill", function(d) { return colorScale(color(d)); })
+      .style('fill', function(d) { return colorScale(color(d)); })
       .call(position);
 
   // Add an overlay for the iteration label.
   var box = label.node().getBBox();
 
-  var overlay = svg.append("rect")
-        .attr("class", "overlay")
-        .attr("x", box.x)
-        .attr("y", box.y)
-        .attr("width", box.width)
-        .attr("height", box.height)
-        .on("mouseover", enableInteraction);
+  var overlay = svg.append('rect')
+        .attr('class', 'overlay')
+        .attr('x', box.x)
+        .attr('y', box.y)
+        .attr('width', box.width)
+        .attr('height', box.height)
+        .on('mouseover', enableInteraction);
 
   // Start a transition that interpolates the data based on iteration.
   svg.transition()
       .duration(animationDuration * iterations)
-      .ease("linear")
-      .tween("iteration", tweenIteration)
-      .each("end", enableInteraction);
+      .ease('linear')
+      .tween('iteration', tweenIteration)
+      .each('end', enableInteraction);
 
   // Positions the dots based on data.
   function position(dot) {
-    dot .attr("x", function(d) { return xScale(x(d)); })
-        .attr("y", function(d) { return yScale(y(d)); });
+    dot .attr('x', function(d) { return xScale(x(d)); })
+        .attr('y', function(d) { return yScale(y(d)); });
   }
 
   // After the transition finishes, you can mouseover to change the iteration.
@@ -167,17 +167,17 @@ d3.json("mnist.json", function(results) {
     svg.transition().duration(0);
 
     overlay
-        .on("mouseover", mouseover)
-        .on("mouseout", mouseout)
-        .on("mousemove", mousemove)
-        .on("touchmove", mousemove);
+        .on('mouseover', mouseover)
+        .on('mouseout', mouseout)
+        .on('mousemove', mousemove)
+        .on('touchmove', mousemove);
 
     function mouseover() {
-      label.classed("active", true);
+      label.classed('active', true);
     }
 
     function mouseout() {
-      label.classed("active", false);
+      label.classed('active', false);
     }
 
     function mousemove() {
@@ -199,8 +199,8 @@ d3.json("mnist.json", function(results) {
     var itr = Math.ceil(iteration) - 1;
   	xScale.domain([-xmaxs[itr], xmaxs[itr]]);
   	yScale.domain([-ymaxs[itr], ymaxs[itr]]);
-  	svg.select(".x.axis").call(xAxis);
-  	svg.select(".y.axis").call(yAxis);
+  	svg.select('.x.axis').call(xAxis);
+  	svg.select('.y.axis').call(yAxis);
 
     dot.data(interpolated, key).call(position);
     label.text(pad(Math.round(iteration), 4));
