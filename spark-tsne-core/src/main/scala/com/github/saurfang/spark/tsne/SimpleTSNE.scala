@@ -22,8 +22,8 @@ object SimpleTSNE extends Logging {
     }
 
     val n = input.numRows().toInt
-    val early_exaggeration = 100
-    val t_momentum = 20
+    val early_exaggeration = 200
+    val t_momentum = 50
     val initial_momentum = 0.5
     val final_momentum = 0.8
     val eta = 500.0
