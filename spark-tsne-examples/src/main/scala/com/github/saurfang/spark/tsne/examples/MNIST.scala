@@ -26,7 +26,7 @@ object MNIST extends Logging {
       .cache()
     //logInfo(dataset.collect.map(_._2.toList).toList.toString)
 
-    val features = dataset.map(x => Vectors.dense(x._2))
+    //val features = dataset.map(x => Vectors.dense(x._2))
     //val scaler = new StandardScaler(true, true).fit(features)
     //val scaledData = scaler.transform(features)
     //  .map(v => Vectors.dense(v.toArray.map(x => if(x.isNaN || x.isInfinite) 0.0 else x)))

@@ -116,7 +116,7 @@ var label = svg.append("text")
 // Load the data.
 d3.json("mnist.json", function(results) {
   var iterations = x(results[0]).length;
-  var animationDuration = 200;
+  var animationDuration = 100;
 
   // A bisector since many nation's data is sparsely-defined.
   var bisect = d3.bisector(function(d) { return d[0]; });

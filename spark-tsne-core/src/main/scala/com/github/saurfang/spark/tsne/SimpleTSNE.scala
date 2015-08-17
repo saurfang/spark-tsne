@@ -29,7 +29,7 @@ object SimpleTSNE extends Logging {
     val eta = 500.0
     val min_gain = 0.01
 
-    val Y: DenseMatrix[Double] = DenseMatrix.rand(n, noDims, Rand.gaussian) :* .0001
+    val Y: DenseMatrix[Double] = DenseMatrix.rand(n, noDims, Rand.gaussian(0, 1e-4))
     val iY = DenseMatrix.zeros[Double](n, noDims)
     val gains = DenseMatrix.ones[Double](n, noDims)
 
@@ -46,7 +46,7 @@ object SimpleTSNE extends Logging {
       .cache()
     val p_total = p_sum.map(_._2).sum()
     val P = p_sum
-      .map{case ((i, j), v) => (i, (j, max(v / p_total, 1e-12))) }
+      .map{case ((i, j), v) => (i, (j, math.max(v / 2 / n, 1e-12))) }
       .groupByKey()
       .glom()
       .cache()
@@ -65,7 +65,7 @@ object SimpleTSNE extends Logging {
         val (dY, loss) = P.zip(numerator).treeAggregate((DenseMatrix.zeros[Double](n, noDims), 0.0))(
           seqOp = (c, v) => {
             // c: (grad, loss), v: (Array[(i, Iterable(j, Distance))], numerator)
-            val l = TSNEGradient.compute(v._1, bcY.value, v._2, bcNumerator.value, c._1, iteration < early_exaggeration)
+            val l = TSNEGradient.compute(v._1, bcY.value, v._2, bcNumerator.value, c._1, iteration <= early_exaggeration)
             (c._1, c._2 + l)
           },
           combOp = (c1, c2) => {
@@ -82,7 +82,7 @@ object SimpleTSNE extends Logging {
           case ((i, j), gain) =>
             gains.unsafeUpdate(i, j, math.max(min_gain, if(dYiY(i, j)) gain + 0.2 else gain * 0.8))
         }
-        iY := (momentum :* iY) - (eta :* gains :* dY)
+        iY := (momentum :* iY) - (eta / math.sqrt(iteration) :* gains :* dY)
         Y :+= iY
         Y := Y(*, ::) - (mean(Y(::, *)): DenseMatrix[Double]).toDenseVector
 
