@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<title>t-SNE Viewer</title>
+<style>
+
+#chart {
+  margin-left: -40px;
+  height: 506px;
+}
+
+text {
+  font: 10px sans-serif;
+}
+
+.axis path, .axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.label {
+  fill: #777;
+}
+
+.iteration.label {
+  font: 500 196px "Helvetica Neue";
+  fill: #ddd;
+}
+
+.iteration.label.active {
+  fill: #aaa;
+}
+
+.overlay {
+  fill: none;
+  pointer-events: all;
+  cursor: ew-resize;
+}
+
+</style>
+
+<h1>T-SNE Viewer</h1>
+
+<p id="chart"></p>
+
+<aside>Mouseover the iteration to move forward and backwards through time.</aside>
+
+<p class="attribution">Source: <a href="http://bost.ocks.org/mike/results">The Wealth & Health of Results</a>, <a href="http://bost.ocks.org/mike/">Mike Bostock</a>.</p>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+// Various accessors that specify the four dimensions of data to visualize.
+function x(d) { return d.x; }
+function y(d) { return d.y; }
+function text(d) { return d.label; }
+function color(d) { return d.label; }
+function key(d) { return d.key; }
+
+// Chart dimensions.
+var margin = {top: 19.5, right: 19.5, bottom: 19.5, left: 99.5},
+    width = 960 - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+// Various scales. These domains make assumptions of data, naturally.
+var xScale = d3.scale.linear().domain([-20, 20]).range([0, width]),
+    yScale = d3.scale.linear().domain([-20, 20]).range([height, 0]),
+    colorScale = d3.scale.category10();
+
+// The x & y axes.
+var xAxis = d3.svg.axis().orient("bottom").scale(xScale).ticks(12, d3.format(",d")),
+    yAxis = d3.svg.axis().orient("left").scale(yScale).ticks(12, d3.format(",d"));
+
+// Create the SVG container and set the origin.
+var svg = d3.select("#chart").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+// Add the x-axis.
+svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis);
+
+// Add the y-axis.
+svg.append("g")
+    .attr("class", "y axis")
+    .call(yAxis);
+
+// Add an x-axis label.
+svg.append("text")
+    .attr("class", "x label")
+    .attr("text-anchor", "end")
+    .attr("x", width)
+    .attr("y", height - 6);
+
+// Add a y-axis label.
+svg.append("text")
+    .attr("class", "y label")
+    .attr("text-anchor", "end")
+    .attr("y", 6)
+    .attr("dy", ".75em")
+    .attr("transform", "rotate(-90)");
+
+// Add the iteration label; the value is set on transition.
+var label = svg.append("text")
+    .attr("class", "iteration label")
+    .attr("text-anchor", "end")
+    .attr("y", height - 24)
+    .attr("x", width)
+    .text("0000");
+
+// Load the data.
+d3.json("mnist.json", function(results) {
+  var iterations = x(results[0]).length;
+  var animationDuration = 200;
+
+  // A bisector since many nation's data is sparsely-defined.
+  var bisect = d3.bisector(function(d) { return d[0]; });
+
+  // Add a dot per nation. Initialize the data at 1, and set the colors.
+  var dot = svg.append("g")
+      .attr("class", "dots")
+    .selectAll(".dot")
+      .data(interpolateData(1))
+    .enter().append("text")
+      .attr("class", "dot")
+      .text(function(d) { return text(d); })
+      .style("fill", function(d) { return colorScale(color(d)); })
+      .call(position);
+
+  // Add an overlay for the iteration label.
+  var box = label.node().getBBox();
+
+  var overlay = svg.append("rect")
+        .attr("class", "overlay")
+        .attr("x", box.x)
+        .attr("y", box.y)
+        .attr("width", box.width)
+        .attr("height", box.height)
+        .on("mouseover", enableInteraction);
+
+  // Start a transition that interpolates the data based on iteration.
+  svg.transition()
+      .duration(animationDuration * iterations)
+      .ease("linear")
+      .tween("iteration", tweenIteration)
+      .each("end", enableInteraction);
+
+  // Positions the dots based on data.
+  function position(dot) {
+    dot .attr("x", function(d) { return xScale(x(d)); })
+        .attr("y", function(d) { return yScale(y(d)); });
+  }
+
+  // After the transition finishes, you can mouseover to change the iteration.
+  function enableInteraction() {
+    var iterationScale = d3.scale.linear()
+        .domain([1, iterations])
+        .range([box.x + 10, box.x + box.width - 10])
+        .clamp(true);
+
+    // Cancel the current transition, if any.
+    svg.transition().duration(0);
+
+    overlay
+        .on("mouseover", mouseover)
+        .on("mouseout", mouseout)
+        .on("mousemove", mousemove)
+        .on("touchmove", mousemove);
+
+    function mouseover() {
+      label.classed("active", true);
+    }
+
+    function mouseout() {
+      label.classed("active", false);
+    }
+
+    function mousemove() {
+      displayIteration(iterationScale.invert(d3.mouse(this)[0]));
+    }
+  }
+
+  // Tweens the entire chart by first tweening the iteration, and then the data.
+  // For the interpolated data, the dots and label are redrawn.
+  function tweenIteration() {
+    var iteration = d3.interpolateNumber(1, iterations);
+    return function(t) { displayIteration(iteration(t)); };
+  }
+
+  // Updates the display to show the specified iteration.
+  function displayIteration(iteration) {
+  	var interpolated = interpolateData(iteration);
+  	
+    var itr = Math.ceil(iteration) - 1;
+  	xScale.domain([-xmaxs[itr], xmaxs[itr]]);
+  	yScale.domain([-ymaxs[itr], ymaxs[itr]]);
+  	svg.select(".x.axis").call(xAxis);
+  	svg.select(".y.axis").call(yAxis);
+
+    dot.data(interpolated, key).call(position);
+    label.text(pad(Math.round(iteration), 4));
+  }
+
+  // Interpolates the dataset for the given (fractional) iteration.
+  function interpolateData(iteration) {
+    return results.map(function(d) {
+      return {
+      	key: d.key,
+        label: d.label,
+        x: interpolateValues(d.x, iteration),
+        y: interpolateValues(d.y, iteration)
+      };
+    });
+  }
+
+  // Finds (and possibly interpolates) the value for the specified iteration.
+  function interpolateValues(values, iteration) {
+    var i = bisect.left(values, iteration, 0, values.length - 1),
+        a = values[i];
+    if (i > 0) {
+      var b = values[i - 1],
+          t = (iteration - a[0]) / (b[0] - a[0]);
+      return a[1] * (1 - t) + b[1] * t;
+    }
+    return a[1];
+  }
+
+  // Left pad number with '0'
+  function pad(n, width, z) {
+    z = z || '0';
+    n = n + '';
+    return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
+  } 
+
+  // a soft max that tries to avoid outlier
+  Array.prototype.max = function() {
+    //return this.sort(function(a, b) { return a - b; })[Math.round(this.length * .90)] * 1.5;
+    return Math.max.apply(null, this);
+  };
+
+  // find cumulative maximum absolute value for axis
+  var xmaxs = [], ymaxs = [];
+  d3.range(0, iterations).reduce(function (acc, i) {
+    var xmax = Math.max(acc[0], results.map(function(d) { return Math.abs(x(d)[i][1]); }).max());
+    var ymax = Math.max(acc[1], results.map(function(d) { return Math.abs(y(d)[i][1]); }).max());
+
+    xmaxs.push(xmax);
+    ymaxs.push(ymax);
+
+    return  [xmax, ymax];
+  }, [0, 0]);
+});
+
+</script>
