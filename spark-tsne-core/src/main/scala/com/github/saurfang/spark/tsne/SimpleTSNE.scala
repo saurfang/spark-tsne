@@ -21,31 +21,17 @@ object SimpleTSNE extends Logging {
       logWarning("Input is not persisted and performance could be bad")
     }
 
-    val n = input.numRows().toInt
-    val early_exaggeration = 100
-    val t_momentum = 50
-    val initial_momentum = 0.5
-    val final_momentum = 0.8
-    val eta = 500.0
-    val min_gain = 0.01
+    val tsneParam = TSNEParam()
+    import tsneParam._
 
+    val n = input.numRows().toInt
     val Y: DenseMatrix[Double] = DenseMatrix.rand(n, noDims, Rand.gaussian(0, 1))
     val iY = DenseMatrix.zeros[Double](n, noDims)
     val gains = DenseMatrix.ones[Double](n, noDims)
 
     // approximate p_{j|i}
     val p_ji = X2P(input, 1e-5, perplexity)
-    // p_ij = (p_{i|j} + p_{j|i}) / 2n
-    val P = p_ji.entries
-      .flatMap(e => Seq(
-        ((e.i.toInt, e.j.toInt), e.value),
-        ((e.j.toInt, e.i.toInt), e.value)
-      ))
-      .reduceByKey(_ + _) // p + p'
-      .map{case ((i, j), v) => (i, (j, math.max(v / 2 / n, 1e-12))) } // p / 2n
-      .groupByKey()
-      .glom()
-      .cache()
+    val P = TSNEHelper.computeP(p_ji, n).glom().cache()
 
     Observable(subscriber => {
       var iteration = 1
@@ -72,13 +58,21 @@ object SimpleTSNE extends Logging {
         numerator.unpersist()
 
         val momentum = if (iteration <= t_momentum) initial_momentum else final_momentum
-        val dYiY = (dY :> 0.0) :!= (iY :> 0.0)
-        gains.foreachPair{
-          case ((i, j), gain) =>
-            gains.unsafeUpdate(i, j, math.max(min_gain, if(dYiY(i, j)) gain + 0.2 else gain * 0.8))
+        gains.foreachPair {
+          case ((i, j), old_gain) =>
+            val new_gain = math.max(min_gain,
+              if((dY.unsafeValueAt(i, j) > 0.0) != (iY.unsafeValueAt(i, j) > 0.0))
+                old_gain + 0.2
+              else
+                old_gain * 0.8
+            )
+            gains.unsafeUpdate(i, j, new_gain)
+
+            val new_iY = momentum * iY.unsafeValueAt(i, j) - eta * new_gain * dY.unsafeValueAt(i, j)
+            iY.unsafeUpdate(i, j, new_iY)
+
+            Y.unsafeUpdate(i, j, Y.unsafeValueAt(i, j) + new_iY) // Y += iY
         }
-        iY := (momentum :* iY) - (eta :* gains :* dY)
-        Y :+= iY
         Y := Y(*, ::) - (mean(Y(::, *)): DenseMatrix[Double]).toDenseVector
 
         logDebug(s"Iteration $iteration finished with $loss")
