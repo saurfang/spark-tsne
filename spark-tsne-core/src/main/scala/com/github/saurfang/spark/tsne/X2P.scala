@@ -16,7 +16,7 @@ object X2P extends Logging {
     val logU = Math.log(perplexity)
     val norms = x.rows.map(Vectors.norm(_, 2.0))
     norms.persist()
-    val rowsWithNorm = x.rows.zip(norms).map{ case (v, norm) => new VectorWithNorm(v, norm) }
+    val rowsWithNorm = x.rows.zip(norms).map{ case (v, norm) => VectorWithNorm(v, norm) }
     val neighbors = rowsWithNorm
       .zipWithIndex()
       .flatMap{ case (v, i) => (0L until i).map(j => (j, (i, v)))}

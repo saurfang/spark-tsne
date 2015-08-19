@@ -1,9 +1,9 @@
-package com.github.saurfang.spark.tsne
+package com.github.saurfang.spark.tsne.impl
 
 import breeze.linalg._
-import breeze.optimize.{DiffFunction, CachedDiffFunction, LBFGS}
-import breeze.stats._
+import breeze.optimize.{CachedDiffFunction, DiffFunction, LBFGS}
 import breeze.stats.distributions.Rand
+import com.github.saurfang.spark.tsne.{TSNEGradient, X2P}
 import org.apache.spark.Logging
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.rdd.RDD
