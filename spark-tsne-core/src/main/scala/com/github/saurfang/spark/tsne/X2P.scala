@@ -1,5 +1,6 @@
 package com.github.saurfang.spark.tsne
 
+import breeze.linalg.DenseVector
 import org.apache.spark.Logging
 import org.apache.spark.mllib.X2PHelper._
 import org.apache.spark.mllib.linalg.Vectors
@@ -35,7 +36,7 @@ object X2P extends Logging {
           var betamax = Double.PositiveInfinity
           var beta = 1.0
 
-          val d = Vectors.dense(arr.map(_._2))
+          val d = DenseVector(arr.map(_._2))
           var (h, p) = Hbeta(d, beta)
 
           //logInfo("data was " + d.toArray.toList)
@@ -63,7 +64,7 @@ object X2P extends Logging {
 
           //logInfo("array P is " + p.toList)
 
-          (arr.map(_._1).zip(p).map { case (j, v) => MatrixEntry(i, j, v) }, beta)
+          (arr.map(_._1).zip(p.toArray).map { case (j, v) => MatrixEntry(i, j, v) }, beta)
       }
 
     logInfo("Mean value of sigma: " + p_betas.map(x => math.sqrt(1 / x._2)).mean)
