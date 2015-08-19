@@ -12,7 +12,8 @@ object Common {
     scalacOptions ++= Seq("-target:jvm-1.7", "-deprecation", "-feature"),
     //git.useGitDescribe := true,
     git.baseVersion := "0.0.1",
-    parallelExecution in test := false
+    parallelExecution in test := false,
+    updateOptions := updateOptions.value.withCachedResolution(true)
   )
 
   def tsneProject(path: String): Project = macro tsneProjectMacroImpl
