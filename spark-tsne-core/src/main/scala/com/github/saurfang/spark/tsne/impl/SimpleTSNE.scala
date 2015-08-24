@@ -17,10 +17,12 @@ object SimpleTSNE extends Logging {
             noDims: Int = 2,
             maxIterations: Int = 1000,
             perplexity: Double = 30,
-            seed: Long = Random.nextLong()): Observable[(Int, DenseMatrix[Double], Double)] = {
+            seed: Long = Random.nextLong()): Observable[(Int, DenseMatrix[Double], Option[Double])] = {
     if(input.rows.getStorageLevel == StorageLevel.NONE) {
       logWarning("Input is not persisted and performance could be bad")
     }
+
+    Rand.generator.setSeed(seed)
 
     val tsneParam = TSNEParam()
     import tsneParam._
@@ -77,7 +79,7 @@ object SimpleTSNE extends Logging {
         Y := Y(*, ::) - (mean(Y(::, *)): DenseMatrix[Double]).toDenseVector
 
         logDebug(s"Iteration $iteration finished with $loss")
-        subscriber.onNext((iteration, Y.copy, loss))
+        subscriber.onNext((iteration, Y.copy, Some(loss)))
         iteration += 1
       }
       if(!subscriber.isUnsubscribed) subscriber.onCompleted()

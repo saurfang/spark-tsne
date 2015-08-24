@@ -23,10 +23,12 @@ object LBFGSTSNE extends Logging {
             numCorrections: Int = 10,
             convergenceTol: Double = 1e-4,
             perplexity: Double = 30,
-            seed: Long = Random.nextLong()): Observable[(Int, DenseMatrix[Double], Double)] = {
+            seed: Long = Random.nextLong()): Observable[(Int, DenseMatrix[Double], Option[Double])] = {
     if(input.rows.getStorageLevel == StorageLevel.NONE) {
       logWarning("Input is not persisted and performance could be bad")
     }
+
+    Rand.generator.setSeed(seed)
 
     val n = input.numRows().toInt
     val early_exaggeration = 100
@@ -67,7 +69,7 @@ object LBFGSTSNE extends Logging {
           logDebug(s"Iteration $iteration finished with $loss")
 
           Y := asDenseMatrix(state.x, n, noDims)
-          subscriber.onNext((iteration, Y.copy, loss))
+          subscriber.onNext((iteration, Y.copy, Some(loss)))
           iteration += 1
         }
       }
@@ -84,7 +86,7 @@ object LBFGSTSNE extends Logging {
           logDebug(s"Iteration $iteration finished with $loss")
 
           Y := asDenseMatrix(state.x, n, noDims)
-          subscriber.onNext((iteration, Y.copy, loss))
+          subscriber.onNext((iteration, Y.copy, Some(loss)))
           iteration += 1
         }
       }
