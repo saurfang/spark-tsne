@@ -3,7 +3,7 @@ package com.github.saurfang.spark.tsne.examples
 
 import java.io.{OutputStreamWriter, BufferedWriter}
 
-import com.github.saurfang.spark.tsne._
+import com.github.saurfang.spark.tsne.impl._
 import org.apache.hadoop.fs.{Path, FileSystem}
 import org.apache.spark.mllib.feature.StandardScaler
 import org.apache.spark.mllib.linalg.Vectors
@@ -44,12 +44,13 @@ object MNIST extends Logging {
 
     val costWriter = new BufferedWriter(new OutputStreamWriter(fs.create(new Path(s".tmp/MNIST/cost.txt"), true)))
 
-    SimpleTSNE.tsne(pcaMatrix, perplexity = 20, maxIterations = 400)
+    //SimpleTSNE.tsne(pcaMatrix, perplexity = 20, maxIterations = 200)
+    BHTSNE.tsne(pcaMatrix, maxIterations = 400)
     //LBFGSTSNE.tsne(pcaMatrix, perplexity = 10, maxNumIterations = 500, numCorrections = 10, convergenceTol = 1e-8)
       .toBlocking
       .foreach {
       case (i, y, loss) =>
-        logInfo(s"$i iteration finished with loss $loss")
+        if(loss.isDefined) logInfo(s"$i iteration finished with loss $loss")
 
         val os = fs.create(new Path(s".tmp/MNIST/result${"%05d".format(i)}.csv"), true)
         val writer = new BufferedWriter(new OutputStreamWriter(os))
@@ -59,7 +60,7 @@ object MNIST extends Logging {
               writer.write(labels(row).toString)
               writer.write(y(row, ::).inner.toArray.mkString(",", ",", "\n"))
           }
-          costWriter.write(loss + "\n")
+          if(loss.isDefined) costWriter.write(loss.get + "\n")
         } finally {
           writer.close()
         }

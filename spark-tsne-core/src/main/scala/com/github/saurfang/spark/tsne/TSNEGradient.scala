@@ -2,6 +2,7 @@ package com.github.saurfang.spark.tsne
 
 import breeze.linalg._
 import breeze.numerics._
+import com.github.saurfang.spark.tsne.tree.SPTree
 import org.apache.spark.Logging
 
 object TSNEGradient extends Logging  {
@@ -69,5 +70,78 @@ object TSNEGradient extends Logging  {
     }
 
     loss
+  }
+
+  /** BH Tree related functions **/
+
+  /**
+   *
+   * @param data array of (row_id, Seq(col_id), Vector(P_ij))
+   * @param Y matrix
+   * @param posF positive forces
+   */
+  def computeEdgeForces(data: Array[(Int, Seq[Int], DenseVector[Double])],
+              Y: DenseMatrix[Double],
+              posF: DenseMatrix[Double]): Unit = {
+    data.foreach {
+      case (i, cols, vec) =>
+        // k x D - 1 x D  => k x D
+        val diff = Y(cols, ::).toDenseMatrix.apply(*, ::) - Y(i, ::).t
+        // k x D => k x 1
+        val qZ = 1.0 :+ sum(pow(diff, 2).apply(*, ::))
+        posF(i, ::) := (vec :/ qZ).t * (-diff)
+    }
+  }
+
+  def computeNonEdgeForces(tree: SPTree,
+                           Y: DenseMatrix[Double],
+                           theta: Double,
+                           negF: DenseMatrix[Double],
+                           idx: Int *): Double = {
+    idx.foldLeft(0.0)((acc, i) => acc + computeNonEdgeForce(tree, Y(i, ::).t, theta, negF, i))
+  }
+
+  /**
+   * Calcualte negative forces using BH approximation
+   *
+   * @param tree SPTree used for approximation
+   * @param y y_i
+   * @param theta threshold for correctness / speed
+   * @param negF negative forces
+   * @param i row
+   * @return sum of Q
+   */
+  private def computeNonEdgeForce(tree: SPTree,
+                                  y: DenseVector[Double],
+                                  theta: Double,
+                                  negF: DenseMatrix[Double],
+                                  i: Int): Double = {
+    import tree._
+    if(getCount == 0 || (isLeaf && center.equals(y))) {
+      0.0
+    } else {
+      val diff = y - center
+      val diffSq = sum(pow(diff, 2))
+      if(isLeaf || radiusSq / diffSq < theta) {
+        val qZ = 1 / (1 + diffSq)
+        val nqZ = getCount * qZ
+        negF(i, ::) :+= (nqZ * qZ * diff).t
+        nqZ
+      } else {
+        children.foldLeft(0.0)((acc, child) => acc + computeNonEdgeForce(child, y, theta, negF, i))
+      }
+    }
+  }
+
+  def computeLoss(data: Array[(Int, Seq[Int], DenseVector[Double])],
+                  Y: DenseMatrix[Double],
+                  sumQ: Double): Double = {
+    data.foldLeft(0.0){
+      case (acc, (i, cols, vec)) =>
+        val diff = Y(cols, ::).toDenseMatrix.apply(*, ::) - Y(i, ::).t
+        val diffSq =  sum(pow(diff, 2).apply(*, ::))
+        val Q = (1.0 :/ (1.0 :+ diffSq)) :/ sumQ
+        sum(vec :* breeze.numerics.log(max(vec, 1e-12) :/ max(Q, 1e-12)))
+    }
   }
 }

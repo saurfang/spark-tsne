@@ -8,9 +8,9 @@ object Dependencies {
   )
 
   object Compile {
-    val spark = "org.apache.spark" %% "spark-mllib" % "1.4.0" % "provided"
+    val spark = "org.apache.spark" %% "spark-mllib" % "1.4.1" % "provided"
     val rx = "io.reactivex" %% "rxscala" % "0.25.0"
-    val netlib = "com.github.fommil.netlib" % "all" % "1.1.2"
+    val breeze_natives = "org.scalanlp" %% "breeze-natives" % "0.11.2" % "provided"
 
     object Test {
       val scalatest = "org.scalatest" %% "scalatest" % "2.2.4" % "test"
@@ -20,5 +20,5 @@ object Dependencies {
   import Compile._
   val l = libraryDependencies
 
-  val core = l ++= Seq(spark, rx, netlib, Test.scalatest)
+  val core = l ++= Seq(spark, rx, breeze_natives, Test.scalatest)
 }
