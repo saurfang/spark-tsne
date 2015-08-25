@@ -6,7 +6,7 @@
 
 #chart {
   margin-left: -40px;
-  height: 506px;
+  height: 650px;
 }
 
 text {
@@ -60,8 +60,8 @@ function key(d) { return d.key; }
 
 // Chart dimensions.
 var margin = {top: 19.5, right: 19.5, bottom: 19.5, left: 99.5},
-    width = 960 - margin.right,
-    height = 500 - margin.top - margin.bottom;
+    width = 640 - margin.right,
+    height = 640 - margin.top - margin.bottom;
 
 // Various scales. These domains make assumptions of data, naturally.
 var xScale = d3.scale.linear().domain([-20, 20]).range([0, width]),
