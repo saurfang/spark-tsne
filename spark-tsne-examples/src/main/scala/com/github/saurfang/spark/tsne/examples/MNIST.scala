@@ -40,7 +40,6 @@ object MNIST extends Logging {
     val matrix = new RowMatrix(scaledData)
     val pcaMatrix = matrix.multiply(matrix.computePrincipalComponents(50))
     pcaMatrix.rows.cache()
-    scaledData.unpersist()
 
     val costWriter = new BufferedWriter(new OutputStreamWriter(fs.create(new Path(s".tmp/MNIST/cost.txt"), true)))
 

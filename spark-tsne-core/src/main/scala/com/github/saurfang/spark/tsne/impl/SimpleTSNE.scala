@@ -58,25 +58,10 @@ object SimpleTSNE extends Logging {
           })
 
         bcY.destroy()
+        bcNumerator.destroy()
         numerator.unpersist()
 
-        val momentum = if (iteration <= t_momentum) initial_momentum else final_momentum
-        gains.foreachPair {
-          case ((i, j), old_gain) =>
-            val new_gain = math.max(min_gain,
-              if((dY.unsafeValueAt(i, j) > 0.0) != (iY.unsafeValueAt(i, j) > 0.0))
-                old_gain + 0.2
-              else
-                old_gain * 0.8
-            )
-            gains.unsafeUpdate(i, j, new_gain)
-
-            val new_iY = momentum * iY.unsafeValueAt(i, j) - eta * new_gain * dY.unsafeValueAt(i, j)
-            iY.unsafeUpdate(i, j, new_iY)
-
-            Y.unsafeUpdate(i, j, Y.unsafeValueAt(i, j) + new_iY) // Y += iY
-        }
-        Y := Y(*, ::) - (mean(Y(::, *)): DenseMatrix[Double]).toDenseVector
+        TSNEHelper.update(Y, dY, iY, gains, iteration, tsneParam)
 
         logDebug(s"Iteration $iteration finished with $loss")
         subscriber.onNext((iteration, Y.copy, Some(loss)))

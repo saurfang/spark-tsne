@@ -27,7 +27,6 @@ object X2P extends Logging {
         Seq((i, (j, dist)), (j, (i, dist)))
     }
       .topByKey(mu)(Ordering.by(e => -e._2))
-    norms.unpersist()
 
     val p_betas =
       neighbors.map {
