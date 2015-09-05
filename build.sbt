@@ -12,5 +12,6 @@ lazy val vis = tsneProject("spark-tsne-player").
 
 lazy val examples = tsneProject("spark-tsne-examples").
   dependsOn(core, vis).
+  settings(fork in run := true).
   settings(Dependencies.core).
   settings(SparkSubmit.settings: _*)

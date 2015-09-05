@@ -32,7 +32,7 @@ object BHTSNE extends Logging {
     import tsneParam._
 
     val n = input.numRows().toInt
-    val Y: DenseMatrix[Double] = DenseMatrix.rand(n, noDims, Rand.gaussian(0, 1e-4))
+    val Y: DenseMatrix[Double] = DenseMatrix.rand(n, noDims, Rand.gaussian(0, 1)) :/ 1e4
     val iY = DenseMatrix.zeros[Double](n, noDims)
     val gains = DenseMatrix.ones[Double](n, noDims)
 

@@ -49,6 +49,7 @@ text {
 <p class='attribution'>Source: <a href='http://bost.ocks.org/mike/nations'>The Wealth & Health of Nations</a>, <a href='http://bost.ocks.org/mike/'>Mike Bostock</a>.</p>
 
 <script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js'></script>
+<script src='tsne-json.js'></script>
 <script>
 
 // Various accessors that specify the four dimensions of data to visualize.
@@ -115,18 +116,17 @@ var label = svg.append('text')
 
 // Load the data.
 d3.json('mnist.json?nocache=' + (new Date()).getTime(), function(results) {
-  var iterations = x(results[0]).length;
-  var animationDuration = 100;
+  var iterations = tsneData.iterations,
+      maxIteration = iterations.max(),
+      results = tsneData.data,
+      animationDuration = 100;
 
-  // A bisector since many nation's data is sparsely-defined.
-  var bisect = d3.bisector(function(d) { return d[0]; });
-
-  // Add a dot per nation. Initialize the data at 1, and set the colors.
+  // Add a dot per observation. Initialize the data at 1, and set the colors.
   var dot = svg.append('g')
       .attr('class', 'dots')
-    .selectAll('.dot')
+      .selectAll('.dot')
       .data(interpolateData(1))
-    .enter().append('text')
+      .enter().append('text')
       .attr('class', 'dot')
       .text(function(d) { return text(d); })
       .style('fill', function(d) { return colorScale(color(d)); })
@@ -145,7 +145,7 @@ d3.json('mnist.json?nocache=' + (new Date()).getTime(), function(results) {
 
   // Start a transition that interpolates the data based on iteration.
   svg.transition()
-      .duration(animationDuration * iterations)
+      .duration(animationDuration * maxIteration)
       .ease('linear')
       .tween('iteration', tweenIteration)
       .each('end', enableInteraction);
@@ -159,7 +159,7 @@ d3.json('mnist.json?nocache=' + (new Date()).getTime(), function(results) {
   // After the transition finishes, you can mouseover to change the iteration.
   function enableInteraction() {
     var iterationScale = d3.scale.linear()
-        .domain([1, iterations])
+        .domain([1, maxIteration])
         .range([box.x + 10, box.x + box.width - 10])
         .clamp(true);
 
@@ -188,72 +188,22 @@ d3.json('mnist.json?nocache=' + (new Date()).getTime(), function(results) {
   // Tweens the entire chart by first tweening the iteration, and then the data.
   // For the interpolated data, the dots and label are redrawn.
   function tweenIteration() {
-    var iteration = d3.interpolateNumber(1, iterations);
+    var iteration = d3.interpolateNumber(1, maxIteration);
     return function(t) { displayIteration(iteration(t)); };
   }
 
   // Updates the display to show the specified iteration.
   function displayIteration(iteration) {
-  	var interpolated = interpolateData(iteration);
+  	var interpolated = interpolateData(iteration, iterations, results);
   	
-    var itr = Math.ceil(iteration) - 1;
-  	xScale.domain([-xmaxs[itr], xmaxs[itr]]);
-  	yScale.domain([-ymaxs[itr], ymaxs[itr]]);
-  	svg.select('.x.axis').call(xAxis);
-  	svg.select('.y.axis').call(yAxis);
+    var limits = interpolated.reduce(function(acc, data) {
+      return [Math.max(acc[0], Math.abs(data.x)), Math.max(acc[1], Math.abs(data.y))];
+    }, [0, 0]);
+    updateScale([-limits[0], limits[0]], [-limits[1], limits[1]]);
 
     dot.data(interpolated, key).call(position);
     label.text(pad(Math.round(iteration), 4));
   }
-
-  // Interpolates the dataset for the given (fractional) iteration.
-  function interpolateData(iteration) {
-    return results.map(function(d) {
-      return {
-      	key: d.key,
-        label: d.label,
-        x: interpolateValues(d.x, iteration),
-        y: interpolateValues(d.y, iteration)
-      };
-    });
-  }
-
-  // Finds (and possibly interpolates) the value for the specified iteration.
-  function interpolateValues(values, iteration) {
-    var i = bisect.left(values, iteration, 0, values.length - 1),
-        a = values[i];
-    if (i > 0) {
-      var b = values[i - 1],
-          t = (iteration - a[0]) / (b[0] - a[0]);
-      return a[1] * (1 - t) + b[1] * t;
-    }
-    return a[1];
-  }
-
-  // Left pad number with '0'
-  function pad(n, width, z) {
-    z = z || '0';
-    n = n + '';
-    return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
-  } 
-
-  // a soft max that tries to avoid outlier
-  Array.prototype.max = function() {
-    //return this.sort(function(a, b) { return a - b; })[Math.round(this.length * .90)] * 1.5;
-    return Math.max.apply(null, this);
-  };
-
-  // find cumulative maximum absolute value for axis
-  var xmaxs = [], ymaxs = [];
-  d3.range(0, iterations).reduce(function (acc, i) {
-    var xmax = Math.max(acc[0], results.map(function(d) { return Math.abs(x(d)[i][1]); }).max());
-    var ymax = Math.max(acc[1], results.map(function(d) { return Math.abs(y(d)[i][1]); }).max());
-
-    xmaxs.push(xmax);
-    ymaxs.push(ymax);
-
-    return  [xmax, ymax];
-  }, [0, 0]);
 });
 
 </script>

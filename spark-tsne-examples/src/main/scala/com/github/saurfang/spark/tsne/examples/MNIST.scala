@@ -16,11 +16,11 @@ object MNIST extends Logging {
     val hadoopConf = sc.hadoopConfiguration
     val fs = FileSystem.get(hadoopConf)
 
-    val dataset = sc.textFile("data/MNIST/mnist2500.csv.gz", 5)
-      //.zipWithIndex()
-      //.filter(_._2 < 2500)
-      //.repartition(5)
-      //.map(_._1)
+    val dataset = sc.textFile("data/MNIST/mnist.csv.gz")
+      .zipWithIndex()
+      .filter(_._2 < 6000)
+      .sortBy(_._2, true, 60)
+      .map(_._1)
       .map(_.split(","))
       .map(x => (x.head.toInt, x.tail.map(_.toDouble)))
       .cache()
@@ -44,7 +44,7 @@ object MNIST extends Logging {
     val costWriter = new BufferedWriter(new OutputStreamWriter(fs.create(new Path(s".tmp/MNIST/cost.txt"), true)))
 
     //SimpleTSNE.tsne(pcaMatrix, perplexity = 20, maxIterations = 200)
-    BHTSNE.tsne(pcaMatrix, maxIterations = 400)
+    BHTSNE.tsne(pcaMatrix, maxIterations = 500)
     //LBFGSTSNE.tsne(pcaMatrix, perplexity = 10, maxNumIterations = 500, numCorrections = 10, convergenceTol = 1e-8)
       .toBlocking
       .foreach {

@@ -5,17 +5,27 @@ library(jsonlite)
 
 resultFiles <- list.files("~/GitHub/spark-tsne/.tmp/MNIST/", "result", full.names = TRUE)
 results <- lapply(resultFiles, function(file) { read.csv(file, FALSE) })
+resultsCombined <- lapply(1:length(results), function(i) {
+  result <- results[[i]]
+  names(result)  <- c("label", "x", "y")
+  mutate(result, i = i, key = row_number())
+}) %>%
+  rbind_all()
 
 #### save results as json for viewer ####
-resultsByObs <- lapply(1:nrow(results[[1]]), function(i) {
-  list(
-    key = unbox(i),
-    label = unbox(results[[1]]$V1[i]),
-    x = data.frame(i = 1:length(results), x = sapply(results, . %>% {.$V2[i]} )),
-    y = data.frame(i = 1:length(results), y = sapply(results, . %>% {.$V3[i]} ))
-  )
-})
-write(toJSON(resultsByObs, "values"), "mnist.json")
+iterations <- c(1:99, seq(100, length(results), 5)) # assume 100 early exaggeration here
+resultsByObs <- filter(resultsCombined, i %in% iterations) %>%
+  group_by(key) %>%
+#   do({
+#     list(key = unbox(.$key[1]), label = unbox(.$label[1]),
+#          # assume order will preserve
+#          pos = select(., x, y)) %>%
+#     data_frame
+#   })
+  do(key = unbox(.$key[1]),
+     label = unbox(.$label[1]),
+     pos = select(., x, y))
+write(toJSON(list(iterations = iterations, data = resultsByObs)), "mnist.json")
 
 #### save plot as animated gif ####
 computeLimit <- function(f, cumf) {
