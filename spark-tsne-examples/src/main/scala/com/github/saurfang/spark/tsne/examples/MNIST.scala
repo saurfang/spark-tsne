@@ -4,6 +4,7 @@ package com.github.saurfang.spark.tsne.examples
 import java.io.{OutputStreamWriter, BufferedWriter}
 
 import com.github.saurfang.spark.tsne.impl._
+import com.github.saurfang.spark.tsne.tree.SPTree
 import org.apache.hadoop.fs.{Path, FileSystem}
 import org.apache.spark.mllib.feature.StandardScaler
 import org.apache.spark.mllib.linalg.Vectors
@@ -12,7 +13,10 @@ import org.apache.spark.{Logging, SparkConf, SparkContext}
 
 object MNIST extends Logging {
   def main (args: Array[String]) {
-    val sc = new SparkContext(new SparkConf)
+    val conf = new SparkConf()
+      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+      .registerKryoClasses(Array(classOf[SPTree]))
+    val sc = new SparkContext(conf)
     val hadoopConf = sc.hadoopConfiguration
     val fs = FileSystem.get(hadoopConf)
 

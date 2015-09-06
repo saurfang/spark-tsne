@@ -17,14 +17,14 @@ object X2P extends Logging {
     val norms = x.rows.map(Vectors.norm(_, 2.0))
     norms.persist()
     val rowsWithNorm = x.rows.zip(norms).map{ case (v, norm) => VectorWithNorm(v, norm) }
-    val neighbors = rowsWithNorm
-      .zipWithIndex()
-      .flatMap{ case (v, i) => (0L until i).map(j => (j, (i, v)))}
-      .join(rowsWithNorm.zipWithIndex().map{case (v, i) => (i, v)})
-      .flatMap{
-      case (i, ((j, u), v)) =>
-        val dist = fastSquaredDistance(u, v)
-        Seq((i, (j, dist)), (j, (i, dist)))
+    val neighbors = rowsWithNorm.zipWithIndex()
+      .cartesian(rowsWithNorm.zipWithIndex())
+      .flatMap {
+      case ((u, i), (v, j)) =>
+        if(i < j) {
+          val dist = fastSquaredDistance(u, v)
+          Seq((i, (j, dist)), (j, (i, dist)))
+        } else Seq.empty
     }
       .topByKey(mu)(Ordering.by(e => -e._2))
 
