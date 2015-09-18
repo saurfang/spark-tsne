@@ -8,7 +8,6 @@ import org.apache.spark.Logging
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
-import rx.lang.scala.Observable
 
 import scala.util.Random
 
@@ -23,7 +22,7 @@ object LBFGSTSNE extends Logging {
             numCorrections: Int = 10,
             convergenceTol: Double = 1e-4,
             perplexity: Double = 30,
-            seed: Long = Random.nextLong()): Observable[(Int, DenseMatrix[Double], Option[Double])] = {
+            seed: Long = Random.nextLong()): DenseMatrix[Double] = {
     if(input.rows.getStorageLevel == StorageLevel.NONE) {
       logWarning("Input is not persisted and performance could be bad")
     }
@@ -54,7 +53,6 @@ object LBFGSTSNE extends Logging {
       .glom()
       .cache()
 
-    Observable(subscriber => {
       var iteration = 1
 
       {
@@ -69,7 +67,7 @@ object LBFGSTSNE extends Logging {
           logDebug(s"Iteration $iteration finished with $loss")
 
           Y := asDenseMatrix(state.x, n, noDims)
-          subscriber.onNext((iteration, Y.copy, Some(loss)))
+          //subscriber.onNext((iteration, Y.copy, Some(loss)))
           iteration += 1
         }
       }
@@ -86,13 +84,12 @@ object LBFGSTSNE extends Logging {
           logDebug(s"Iteration $iteration finished with $loss")
 
           Y := asDenseMatrix(state.x, n, noDims)
-          subscriber.onNext((iteration, Y.copy, Some(loss)))
+          //subscriber.onNext((iteration, Y.copy, Some(loss)))
           iteration += 1
         }
       }
 
-      if(!subscriber.isUnsubscribed) subscriber.onCompleted()
-    })
+      Y
   }
 
   private[this] def asDenseMatrix(v: DenseVector[Double], n: Int, noDims: Int) = {

@@ -7,7 +7,6 @@ import com.github.saurfang.spark.tsne.{TSNEGradient, TSNEHelper, TSNEParam, X2P}
 import org.apache.spark.Logging
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.storage.StorageLevel
-import rx.lang.scala.Observable
 
 import scala.util.Random
 
@@ -17,7 +16,8 @@ object SimpleTSNE extends Logging {
             noDims: Int = 2,
             maxIterations: Int = 1000,
             perplexity: Double = 30,
-            seed: Long = Random.nextLong()): Observable[(Int, DenseMatrix[Double], Option[Double])] = {
+            callback: (Int, DenseMatrix[Double], Option[Double]) => Unit = {case _ => },
+            seed: Long = Random.nextLong()): DenseMatrix[Double] = {
     if(input.rows.getStorageLevel == StorageLevel.NONE) {
       logWarning("Input is not persisted and performance could be bad")
     }
@@ -36,9 +36,8 @@ object SimpleTSNE extends Logging {
     val p_ji = X2P(input, 1e-5, perplexity)
     val P = TSNEHelper.computeP(p_ji, n).glom().cache()
 
-    Observable(subscriber => {
       var iteration = 1
-      while(iteration <= maxIterations && !subscriber.isUnsubscribed) {
+      while(iteration <= maxIterations) {
         val bcY = P.context.broadcast(Y)
 
         val numerator = P.map{ arr => TSNEGradient.computeNumerator(bcY.value, arr.map(_._1): _*) }.cache()
@@ -64,10 +63,9 @@ object SimpleTSNE extends Logging {
         TSNEHelper.update(Y, dY, iY, gains, iteration, tsneParam)
 
         logDebug(s"Iteration $iteration finished with $loss")
-        subscriber.onNext((iteration, Y.copy, Some(loss)))
+        callback(iteration, Y.copy, Some(loss))
         iteration += 1
       }
-      if(!subscriber.isUnsubscribed) subscriber.onCompleted()
-    })
+      Y
   }
 }

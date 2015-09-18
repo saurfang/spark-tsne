@@ -48,10 +48,8 @@ object MNIST extends Logging {
     val costWriter = new BufferedWriter(new OutputStreamWriter(fs.create(new Path(s".tmp/MNIST/cost.txt"), true)))
 
     //SimpleTSNE.tsne(pcaMatrix, perplexity = 20, maxIterations = 200)
-    BHTSNE.tsne(pcaMatrix, maxIterations = 500)
+    BHTSNE.tsne(pcaMatrix, maxIterations = 500, callback = {
     //LBFGSTSNE.tsne(pcaMatrix, perplexity = 10, maxNumIterations = 500, numCorrections = 10, convergenceTol = 1e-8)
-      .toBlocking
-      .foreach {
       case (i, y, loss) =>
         if(loss.isDefined) logInfo(s"$i iteration finished with loss $loss")
 
@@ -67,7 +65,7 @@ object MNIST extends Logging {
         } finally {
           writer.close()
         }
-    }
+    })
     costWriter.close()
 
     sc.stop()

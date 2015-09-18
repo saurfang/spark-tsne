@@ -8,7 +8,6 @@ import com.github.saurfang.spark.tsne.{TSNEGradient, TSNEHelper, X2P, TSNEParam}
 import org.apache.spark.Logging
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.storage.StorageLevel
-import rx.lang.scala.Observable
 
 import scala.util.Random
 
@@ -20,8 +19,9 @@ object BHTSNE extends Logging {
             perplexity: Double = 30,
             theta: Double = 0.5,
             reportLoss: Int => Boolean = {i => i % 10 == 0},
+            callback: (Int, DenseMatrix[Double], Option[Double]) => Unit = {case _ => },
             seed: Long = Random.nextLong()
-            ): Observable[(Int, DenseMatrix[Double], Option[Double])] = {
+            ): DenseMatrix[Double] = {
     if(input.rows.getStorageLevel == StorageLevel.NONE) {
       logWarning("Input is not persisted and performance could be bad")
     }
@@ -45,9 +45,8 @@ object BHTSNE extends Logging {
     })
       .cache()
 
-    Observable(subscriber => {
       var iteration = 1
-      while(iteration <= maxIterations && !subscriber.isUnsubscribed) {
+      while(iteration <= maxIterations) {
         val bcY = P.context.broadcast(Y)
         val bcTree = P.context.broadcast(SPTree(Y))
 
@@ -75,10 +74,10 @@ object BHTSNE extends Logging {
             combOp = _ + _
           )
           logDebug(s"Iteration $iteration finished with $loss")
-          subscriber.onNext((iteration, Y.copy, Some(loss)))
+          callback(iteration, Y.copy, Some(loss))
         } else {
           logDebug(s"Iteration $iteration finished")
-          subscriber.onNext((iteration, Y.copy, None))
+          callback(iteration, Y.copy, None)
         }
 
         bcY.destroy()
@@ -95,7 +94,7 @@ object BHTSNE extends Logging {
 
         iteration += 1
       }
-      if(!subscriber.isUnsubscribed) subscriber.onCompleted()
-    })
+
+    Y
   }
 }
