@@ -1,13 +1,13 @@
 package com.github.saurfang.spark.tsne
 
 import breeze.linalg.DenseVector
-import org.apache.spark.Logging
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.mllib.X2PHelper._
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, MatrixEntry, RowMatrix}
 import org.apache.spark.mllib.rdd.MLPairRDDFunctions._
 
-object X2P extends Logging {
+object X2P extends LazyLogging {
   def apply(x: RowMatrix, tol: Double = 1e-5, perplexity: Double = 30.0): CoordinateMatrix = {
     require(tol >= 0, "Tolerance must be non-negative")
     require(perplexity > 0, "Perplexity must be positive")
@@ -66,7 +66,7 @@ object X2P extends Logging {
           (arr.map(_._1).zip(p.toArray).map { case (j, v) => MatrixEntry(i, j, v) }, beta)
       }
 
-    logInfo("Mean value of sigma: " + p_betas.map(x => math.sqrt(1 / x._2)).mean)
+    logger.info("Mean value of sigma: " + p_betas.map(x => math.sqrt(1 / x._2)).mean)
     new CoordinateMatrix(p_betas.flatMap(_._1))
   }
 }

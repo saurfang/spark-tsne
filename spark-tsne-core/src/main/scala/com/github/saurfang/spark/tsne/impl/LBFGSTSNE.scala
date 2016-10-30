@@ -4,7 +4,7 @@ import breeze.linalg._
 import breeze.optimize.{CachedDiffFunction, DiffFunction, LBFGS}
 import breeze.stats.distributions.Rand
 import com.github.saurfang.spark.tsne.{TSNEGradient, X2P}
-import org.apache.spark.Logging
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
@@ -14,7 +14,7 @@ import scala.util.Random
 /**
  * TODO: This doesn't work at all (yet or ever).
  */
-object LBFGSTSNE extends Logging {
+object LBFGSTSNE extends LazyLogging {
   def tsne(
             input: RowMatrix,
             noDims: Int = 2,
@@ -24,7 +24,7 @@ object LBFGSTSNE extends Logging {
             perplexity: Double = 30,
             seed: Long = Random.nextLong()): DenseMatrix[Double] = {
     if(input.rows.getStorageLevel == StorageLevel.NONE) {
-      logWarning("Input is not persisted and performance could be bad")
+      logger.warn("Input is not persisted and performance could be bad")
     }
 
     Rand.generator.setSeed(seed)
@@ -64,7 +64,7 @@ object LBFGSTSNE extends Logging {
           val state = states.next()
           val loss = state.value
           //logInfo(state.convergedReason.get.toString)
-          logDebug(s"Iteration $iteration finished with $loss")
+          logger.debug(s"Iteration $iteration finished with $loss")
 
           Y := asDenseMatrix(state.x, n, noDims)
           //subscriber.onNext((iteration, Y.copy, Some(loss)))
@@ -81,7 +81,7 @@ object LBFGSTSNE extends Logging {
           val state = states.next()
           val loss = state.value
           //logInfo(state.convergedReason.get.toString)
-          logDebug(s"Iteration $iteration finished with $loss")
+          logger.debug(s"Iteration $iteration finished with $loss")
 
           Y := asDenseMatrix(state.x, n, noDims)
           //subscriber.onNext((iteration, Y.copy, Some(loss)))

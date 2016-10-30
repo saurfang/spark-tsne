@@ -1,17 +1,16 @@
 package com.github.saurfang.spark.tsne.impl
 
 import breeze.linalg._
-import breeze.stats._
 import breeze.stats.distributions.Rand
 import com.github.saurfang.spark.tsne.tree.SPTree
-import com.github.saurfang.spark.tsne.{TSNEGradient, TSNEHelper, X2P, TSNEParam}
-import org.apache.spark.Logging
+import com.github.saurfang.spark.tsne.{TSNEGradient, TSNEHelper, TSNEParam, X2P}
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.storage.StorageLevel
 
 import scala.util.Random
 
-object BHTSNE extends Logging {
+object BHTSNE extends LazyLogging {
   def tsne(
             input: RowMatrix,
             noDims: Int = 2,
@@ -23,7 +22,7 @@ object BHTSNE extends Logging {
             seed: Long = Random.nextLong()
             ): DenseMatrix[Double] = {
     if(input.rows.getStorageLevel == StorageLevel.NONE) {
-      logWarning("Input is not persisted and performance could be bad")
+      logger.warn("Input is not persisted and performance could be bad")
     }
 
     Rand.generator.setSeed(seed)
@@ -73,10 +72,10 @@ object BHTSNE extends Logging {
             },
             combOp = _ + _
           )
-          logDebug(s"Iteration $iteration finished with $loss")
+          logger.debug(s"Iteration $iteration finished with $loss")
           callback(iteration, Y.copy, Some(loss))
         } else {
-          logDebug(s"Iteration $iteration finished")
+          logger.debug(s"Iteration $iteration finished")
           callback(iteration, Y.copy, None)
         }
 
@@ -87,7 +86,7 @@ object BHTSNE extends Logging {
         if(iteration == early_exaggeration) {
           P.foreach {
             rows => rows.foreach {
-              case (_, _, vec) => vec.foreachPair { case (i, v) => vec.unsafeUpdate(i, v / exaggeration_factor) }
+              case (_, _, vec) => vec.foreachPair { case (i, v) => vec.update(i, v / exaggeration_factor) }
             }
           }
         }

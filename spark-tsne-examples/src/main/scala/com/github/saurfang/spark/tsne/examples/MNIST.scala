@@ -1,17 +1,17 @@
 package com.github.saurfang.spark.tsne.examples
 
 
-import java.io.{OutputStreamWriter, BufferedWriter}
+import java.io.{BufferedWriter, OutputStreamWriter}
 
 import com.github.saurfang.spark.tsne.impl._
 import com.github.saurfang.spark.tsne.tree.SPTree
-import org.apache.hadoop.fs.{Path, FileSystem}
-import org.apache.spark.mllib.feature.StandardScaler
+import com.typesafe.scalalogging.LazyLogging
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
-import org.apache.spark.{Logging, SparkConf, SparkContext}
+import org.apache.spark.{SparkConf, SparkContext}
 
-object MNIST extends Logging {
+object MNIST extends LazyLogging {
   def main (args: Array[String]) {
     val conf = new SparkConf()
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
@@ -51,7 +51,7 @@ object MNIST extends Logging {
     BHTSNE.tsne(pcaMatrix, maxIterations = 500, callback = {
     //LBFGSTSNE.tsne(pcaMatrix, perplexity = 10, maxNumIterations = 500, numCorrections = 10, convergenceTol = 1e-8)
       case (i, y, loss) =>
-        if(loss.isDefined) logInfo(s"$i iteration finished with loss $loss")
+        if(loss.isDefined) logger.info(s"$i iteration finished with loss $loss")
 
         val os = fs.create(new Path(s".tmp/MNIST/result${"%05d".format(i)}.csv"), true)
         val writer = new BufferedWriter(new OutputStreamWriter(os))
