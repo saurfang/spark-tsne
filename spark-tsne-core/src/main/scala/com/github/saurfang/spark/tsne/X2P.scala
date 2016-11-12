@@ -1,13 +1,16 @@
 package com.github.saurfang.spark.tsne
 
 import breeze.linalg.DenseVector
-import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.mllib.X2PHelper._
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.linalg.distributed.{CoordinateMatrix, MatrixEntry, RowMatrix}
 import org.apache.spark.mllib.rdd.MLPairRDDFunctions._
+import org.slf4j.LoggerFactory
 
-object X2P extends LazyLogging {
+object X2P {
+
+  private def logger = LoggerFactory.getLogger(X2P.getClass)
+
   def apply(x: RowMatrix, tol: Double = 1e-5, perplexity: Double = 30.0): CoordinateMatrix = {
     require(tol >= 0, "Tolerance must be non-negative")
     require(perplexity > 0, "Perplexity must be positive")

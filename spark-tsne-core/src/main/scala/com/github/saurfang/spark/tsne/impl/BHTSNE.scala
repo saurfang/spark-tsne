@@ -4,13 +4,15 @@ import breeze.linalg._
 import breeze.stats.distributions.Rand
 import com.github.saurfang.spark.tsne.tree.SPTree
 import com.github.saurfang.spark.tsne.{TSNEGradient, TSNEHelper, TSNEParam, X2P}
-import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.storage.StorageLevel
+import org.slf4j.LoggerFactory
 
 import scala.util.Random
 
-object BHTSNE extends LazyLogging {
+object BHTSNE {
+  private def logger = LoggerFactory.getLogger(BHTSNE.getClass)
+
   def tsne(
             input: RowMatrix,
             noDims: Int = 2,

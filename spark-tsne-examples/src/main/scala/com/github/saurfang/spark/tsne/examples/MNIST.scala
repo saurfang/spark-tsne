@@ -5,13 +5,15 @@ import java.io.{BufferedWriter, OutputStreamWriter}
 
 import com.github.saurfang.spark.tsne.impl._
 import com.github.saurfang.spark.tsne.tree.SPTree
-import com.typesafe.scalalogging.LazyLogging
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.{SparkConf, SparkContext}
+import org.slf4j.LoggerFactory
 
-object MNIST extends LazyLogging {
+object MNIST {
+  private def logger = LoggerFactory.getLogger(MNIST.getClass)
+
   def main (args: Array[String]) {
     val conf = new SparkConf()
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")

@@ -2,10 +2,12 @@ package com.github.saurfang.spark.tsne
 
 import breeze.linalg._
 import breeze.numerics._
-import com.typesafe.scalalogging.LazyLogging
 import com.github.saurfang.spark.tsne.tree.SPTree
+import org.slf4j.LoggerFactory
 
-object TSNEGradient extends LazyLogging {
+object TSNEGradient {
+  def logger = LoggerFactory.getLogger(TSNEGradient.getClass)
+
   /**
     * Compute the numerator from the matrix Y
     *

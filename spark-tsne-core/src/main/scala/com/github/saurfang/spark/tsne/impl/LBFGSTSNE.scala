@@ -4,17 +4,19 @@ import breeze.linalg._
 import breeze.optimize.{CachedDiffFunction, DiffFunction, LBFGS}
 import breeze.stats.distributions.Rand
 import com.github.saurfang.spark.tsne.{TSNEGradient, X2P}
-import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
+import org.slf4j.LoggerFactory
 
 import scala.util.Random
 
 /**
  * TODO: This doesn't work at all (yet or ever).
  */
-object LBFGSTSNE extends LazyLogging {
+object LBFGSTSNE {
+  private def logger = LoggerFactory.getLogger(LBFGSTSNE.getClass)
+
   def tsne(
             input: RowMatrix,
             noDims: Int = 2,
