@@ -1,16 +1,17 @@
 package com.github.saurfang.spark.tsne.impl
 
 import breeze.linalg._
-import breeze.stats._
 import breeze.stats.distributions.Rand
 import com.github.saurfang.spark.tsne.{TSNEGradient, TSNEHelper, TSNEParam, X2P}
-import org.apache.spark.Logging
 import org.apache.spark.mllib.linalg.distributed.RowMatrix
 import org.apache.spark.storage.StorageLevel
+import org.slf4j.LoggerFactory
 
 import scala.util.Random
 
-object SimpleTSNE extends Logging {
+object SimpleTSNE {
+  private def logger = LoggerFactory.getLogger(SimpleTSNE.getClass)
+
   def tsne(
             input: RowMatrix,
             noDims: Int = 2,
@@ -19,7 +20,7 @@ object SimpleTSNE extends Logging {
             callback: (Int, DenseMatrix[Double], Option[Double]) => Unit = {case _ => },
             seed: Long = Random.nextLong()): DenseMatrix[Double] = {
     if(input.rows.getStorageLevel == StorageLevel.NONE) {
-      logWarning("Input is not persisted and performance could be bad")
+      logger.warn("Input is not persisted and performance could be bad")
     }
 
     Rand.generator.setSeed(seed)
@@ -62,7 +63,7 @@ object SimpleTSNE extends Logging {
 
         TSNEHelper.update(Y, dY, iY, gains, iteration, tsneParam)
 
-        logDebug(s"Iteration $iteration finished with $loss")
+        logger.debug(s"Iteration $iteration finished with $loss")
         callback(iteration, Y.copy, Some(loss))
         iteration += 1
       }
