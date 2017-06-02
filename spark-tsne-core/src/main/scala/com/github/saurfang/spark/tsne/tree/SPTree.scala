@@ -63,7 +63,7 @@ class SPTree private[tree](val dimension: Int,
 object SPTree {
   def apply(Y: DenseMatrix[Double]): SPTree = {
     val d = Y.cols
-    val minMaxs = minMax(Y(::, *)).toDenseVector
+    val minMaxs = minMax(Y(::, *)).t
     val mins = minMaxs.mapValues(_._1)
     val maxs = minMaxs.mapValues(_._2)
 
